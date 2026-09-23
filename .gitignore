@@ -1,0 +1,21 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+.ruff_cache/
+.pytest_cache/
+
+# macOS
+.DS_Store
+
+# Data: multi-GB downloads and per-second parquet files live outside git.
+# Recreate with:  python scripts/phm_data.py small  &&  python scripts/flatten_hdf5.py
+# Kept in git: data/channels.csv, data/*/manifest.csv, data/*/*submission*.csv
+data/raw/
+data/*/lf/
+data/*/ci/
+data/*/hf/
+data/*/photos/
+*.parquet
+*.hdf5
+*.part
