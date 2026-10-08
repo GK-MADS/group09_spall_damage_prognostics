@@ -1,0 +1,440 @@
+<meta charset="utf-8">
+<title>Gear Spall Data Atlas</title>
+<meta name="description" content="PHM 2026 gear spall data: summary statistics and model-planning figures for Group 09">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root{
+  --page:#f4f5f3; --surface:#fcfcfb; --surface-2:#eceeea; --ink:#0b0b0b; --ink-2:#52514e; --muted:#7c7b76;
+  --grid:#e1e0d9; --axis:#c3c2b7; --ring:rgba(11,11,11,.10);
+  --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a;
+  --q0:#e4e6e1; --q1:#b7d3f6; --q2:#3987e5; --q3:#104281;
+  --neg:#2a78d6; --mid:#f0efec; --pos:#e34948;
+  --warn-bg:#fff4dc; --warn-ink:#6b4a00;
+  --font:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  color-scheme:dark;
+  --page:#0f1011; --surface:#1a1a19; --surface-2:#262624; --ink:#ffffff; --ink-2:#c3c2b7; --muted:#8f8e88;
+  --grid:#2c2c2a; --axis:#44443f; --ring:rgba(255,255,255,.10);
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70;
+  --q0:#2e2f2c; --q1:#184f95; --q2:#3987e5; --q3:#9ec5f4;
+  --neg:#3987e5; --mid:#383835; --pos:#e66767;
+  --warn-bg:#3a2f14; --warn-ink:#f5d58a;
+}}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --page:#0f1011; --surface:#1a1a19; --surface-2:#262624; --ink:#ffffff; --ink-2:#c3c2b7; --muted:#8f8e88;
+  --grid:#2c2c2a; --axis:#44443f; --ring:rgba(255,255,255,.10);
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70;
+  --q0:#2e2f2c; --q1:#184f95; --q2:#3987e5; --q3:#9ec5f4;
+  --neg:#3987e5; --mid:#383835; --pos:#e66767;
+  --warn-bg:#3a2f14; --warn-ink:#f5d58a;
+}
+*{box-sizing:border-box}
+body{background:var(--page);color:var(--ink);font-family:var(--font);font-size:15px;line-height:1.55;margin:0}
+.wrap{max-width:1120px;margin:0 auto;padding-inline:20px;padding-block:40px 80px}
+header.top{display:grid;gap:10px;margin-bottom:28px}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+h1{font-size:34px;line-height:1.15;font-weight:600;margin:0;text-wrap:balance;letter-spacing:-.01em}
+h2{font-size:22px;font-weight:600;margin:0;text-wrap:balance}
+h3{font-size:16px;font-weight:600;margin:0}
+p{margin:0;max-width:72ch}
+.lede{color:var(--ink-2);font-size:16px}
+section{display:grid;gap:18px;margin-top:56px}
+section>header{display:grid;gap:6px;border-top:1px solid var(--axis);padding-top:14px}
+.secnum{font-family:var(--mono);font-size:12px;color:var(--muted)}
+nav.toc{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:13px}
+nav.toc a{color:var(--ink-2);text-decoration:none;border-bottom:1px solid var(--axis)}
+nav.toc a:hover{color:var(--ink)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
+.kpi{background:var(--surface);border-radius:8px;padding:14px 16px;box-shadow:0 0 0 1px var(--ring);display:grid;gap:2px}
+.kpi .v{font-size:26px;font-weight:600}
+.kpi .l{font-size:13px;color:var(--ink-2)}
+.kpi .n{font-size:12px;color:var(--muted)}
+figure{margin:0;background:var(--surface);border-radius:10px;box-shadow:0 0 0 1px var(--ring);padding:18px 18px 14px;display:grid;gap:10px;min-width:0}
+figcaption{display:grid;gap:4px}
+.fig-id{font-family:var(--mono);font-size:12px;color:var(--muted)}
+.fig-title{font-weight:600;font-size:15px}
+.fig-sub{font-size:13.5px;color:var(--ink-2);max-width:88ch}
+.note{font-size:13px;color:var(--ink-2);max-width:88ch}
+.why{font-size:13.5px;background:var(--surface-2);border-radius:6px;padding:10px 12px;max-width:none}
+.why b{font-weight:600}
+.scroll{overflow-x:auto}
+table{border-collapse:collapse;font-size:13px;width:100%}
+th,td{padding:6px 10px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--grid)}
+th{font-weight:500;color:var(--ink-2);font-size:12px;position:sticky;top:0;background:var(--surface)}
+th.l,td.l{text-align:left}
+td{font-variant-numeric:tabular-nums}
+td.mono,.mono{font-family:var(--mono);font-size:12.5px}
+th.sort{cursor:pointer;user-select:none}
+th.sort:hover{color:var(--ink)}
+th.sort[aria-sort]::after{content:" ▾";color:var(--muted)}
+.bar{display:inline-block;height:8px;border-radius:0 4px 4px 0;background:var(--s1);vertical-align:middle;margin-right:6px}
+.pill{display:inline-block;font-size:11.5px;padding:1px 8px;border-radius:99px;background:var(--surface-2);color:var(--ink-2)}
+.flag{background:var(--warn-bg);color:var(--warn-ink)}
+.findings{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px}
+.finding{background:var(--surface);border-radius:8px;box-shadow:0 0 0 1px var(--ring);padding:14px 16px;display:grid;gap:6px;align-content:start}
+.finding h3{font-size:14.5px}
+.finding p{font-size:13.5px;color:var(--ink-2)}
+.controls{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;font-size:13px;color:var(--ink-2)}
+select{font:inherit;font-size:13px;color:var(--ink);background:var(--surface);border:1px solid var(--axis);border-radius:6px;padding:5px 8px}
+select:focus-visible,th.sort:focus-visible,a:focus-visible{outline:2px solid var(--s1);outline-offset:2px}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12.5px;color:var(--ink-2);align-items:center}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:6px;vertical-align:-2px}
+.legend i.line{height:2px;width:16px;border-radius:1px;vertical-align:3px}
+.legend i.dot{border-radius:50%;width:10px;height:10px}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,460px),1fr));gap:16px}
+.thumbs{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.thumbs figure{padding:10px;gap:6px}
+.thumbs img{width:100%;border-radius:4px;display:block;aspect-ratio:1.6;object-fit:cover}
+.thumbs .t{font-size:12px;font-family:var(--mono);color:var(--muted)}
+.thumbs .c{font-size:13px;font-weight:500}
+svg{display:block;overflow:visible}
+svg text{font-family:var(--font);fill:var(--muted);font-size:11px}
+svg text.ink{fill:var(--ink-2)}
+svg text.strong{fill:var(--ink);font-weight:500}
+#tip{position:fixed;pointer-events:none;background:var(--surface);color:var(--ink);box-shadow:0 0 0 1px var(--ring),0 6px 20px rgba(0,0,0,.12);border-radius:6px;padding:8px 10px;font-size:12.5px;line-height:1.45;z-index:10;max-width:280px}
+#tip .tv{font-weight:600}
+#tip .tl{color:var(--ink-2)}
+.refs{font-size:13px;color:var(--ink-2);display:grid;gap:6px;padding-left:18px;margin:0}
+.refs a{color:var(--s1)}
+details{font-size:13.5px}
+details summary{cursor:pointer;color:var(--ink-2)}
+@media (max-width:560px){h1{font-size:27px}.wrap{padding-inline:16px}figure{padding:14px 12px}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+<header class="top">
+  <div class="eyebrow">SIADS 696 · Group 09 · PHM 2026 Data Challenge</div>
+  <h1>Gear Spall Data Atlas</h1>
+  <p class="lede">What the vibration, oil-debris and tooth-photo data look like before modeling, and what they imply for Part A (predicting damage level from sensors) and Part B (unsupervised onset detection). Built from the flattened 1 Hz tables in <span class="mono">data/*/lf_1s.parquet</span> and the 2,085 training photos.</p>
+  <nav class="toc" aria-label="Sections">
+    <a href="#inventory">1 · Inventory</a><a href="#quality">2 · Data issues</a><a href="#photos">3 · Photo labels</a><a href="#signals">4 · Sensor signals</a><a href="#partb">5 · Part B prototype</a><a href="#next">6 · Recommendations</a>
+  </nav>
+</header>
+
+<div class="kpis" id="kpis"></div>
+
+<section id="inventory">
+  <header><span class="secnum">Section 1</span><h2>Dataset inventory</h2>
+  <p class="note">Seven run-to-failure gears: four with photos (A, B, C, F), one validation gear (G) and two test gears (D, E). Each run is about 6.15 operating hours at 1,400 rpm; photos are taken of all 28 teeth between runs.</p></header>
+
+  <figure>
+    <figcaption><span class="fig-id">Table 1</span><span class="fig-title">One row per gear</span>
+    <span class="fig-sub">Sensor hours count seconds with valid condition indicators (CIs). Steady share is the percentage of seconds within 20 rpm of 1,400 rpm and within 5% of the gear's nominal torque. The last column is the first inspection where damage was visible by eye.</span></figcaption>
+    <div class="scroll"><table id="t-gears"></table></div>
+  </figure>
+
+  <figure>
+    <figcaption><span class="fig-id">Figure 1</span><span class="fig-title">Run timeline on the cumulative operating-hour axis</span>
+    <span class="fig-sub">Each bar is one run. Pale bars are short runs (under 3 h). The hatched run is Exp-A Run-2, whose sensor files are a byte copy of Run-1. Ticks mark photo inspections, and the diamond marks the first inspection with visible damage.</span></figcaption>
+    <div class="legend" id="lg-timeline"></div>
+    <div id="f-timeline"></div>
+  </figure>
+
+  <figure>
+    <figcaption><span class="fig-id">Table 2</span><span class="fig-title">Channel summary statistics</span>
+    <span class="fig-sub">Pooled over all seven gears, steady-state 1-minute medians (n = <span id="nmin"></span> minutes). Missing % is over all 1-second rows. CIs are unitless.</span></figcaption>
+    <div class="scroll" style="max-height:420px"><table id="t-stats"></table></div>
+  </figure>
+</section>
+
+<section id="quality">
+  <header><span class="secnum">Section 2</span><h2>Data issues to handle before modeling</h2></header>
+  <div class="findings">
+    <div class="finding"><span class="pill flag">Must fix</span><h3>Exp-A Run-2 is a duplicate</h3><p>All 372 files in <span class="mono">Exp-A_Run-2</span> have the same MD5 hashes as Run-1: the same sessions (Gear233Run1/Run2) and the same timestamps. About 6.15 h of Exp-A sensor data is missing, not repeated. The photos for Run-2 are distinct. <span class="mono">flatten_hdf5.py</span> currently counts these hours twice. Deduplicate by content hash and keep the nominal hour axis so the photo times still line up.</p></div>
+    <div class="finding"><span class="pill flag">Must fix</span><h3>Exp-A ran at a different torque</h3><p>Exp-A ran at 120 ft·lbf and about 129 °F. Every other gear ran at 100 ft·lbf and about 120 °F. A pooled model will learn "gear A" as a level shift unless features are standardized per gear or regressed on torque.</p></div>
+    <div class="finding"><span class="pill">Signal</span><h3>Short runs cluster near the end</h3><p>B Run-7, F Run-7 and D Runs 6–9 are 1–2.5 h long, with lower median temperatures (100–110 °F, since the rig had not warmed up). The operators inspected more often once they suspected damage. Filter out warm-up minutes, and do not use run length as a feature: it would leak the label.</p></div>
+    <div class="finding"><span class="pill">Signal</span><h3>DM4500 is a cumulative counter</h3><p>The DM4500 oil-debris bins never decrease within a run (0 negative steps in 23K files), so use differences, not levels. Bins 5–7 are always zero. ICM2 bins hit the 16-bit ceiling (65,535) in up to 0.7% of files; treat those values as clipped.</p></div>
+    <div class="finding"><span class="pill">Signal</span><h3>Run boundaries cause level shifts</h3><p>Several CIs shift in level when a new run starts, after the gearbox has been opened and reassembled for photos. That is why the prototype onset in Section 5 lands on run boundaries. Part B needs per-run warm-up trimming or a run-offset term.</p></div>
+    <div class="finding"><span class="pill">Photos</span><h3>Photo layouts differ by gear</h3><p>A, B and C have 10 close-up frames of teeth 1–4 plus one overview per tooth. Exp-C switches to two camera setups from Run-5. F has exactly one photo per tooth. Collapse to one label per tooth per inspection: 1,092 tooth-inspections from 2,085 photos.</p></div>
+  </div>
+</section>
+
+<section id="photos">
+  <header><span class="secnum">Section 3</span><h2>What the photos show (Part A labels)</h2>
+  <p class="note">Every tooth carries a band of micropitting along the tip contact line from break-in onward, so that band cannot count as damage in the rubric. Real spalls grow below it. These crops show the progression the rubric needs to separate.</p></header>
+  <div class="thumbs" id="thumbs"></div>
+
+  <figure>
+    <figcaption><span class="fig-id">Figure 2</span><span class="fig-title">Tooth × inspection damage map for the training gears</span>
+    <span class="fig-sub">Rows are teeth 1–28 and columns are inspections in order. Initiation and spall cells were checked by eye on the last two inspections of each gear. Pale-blue cells are ones the automated texture score flagged but nobody has reviewed; most are lighting artifacts on Exp-C. The diamond marks each gear's first visible damage. Hover over a cell for its texture score.</span></figcaption>
+    <div class="legend" id="lg-heat"></div>
+    <div class="grid2" id="f-heat" style="grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr))"></div>
+    <div>
+      <div class="note" style="margin:6px 0">Class balance, all 1,092 tooth-inspections</div>
+      <div id="f-balance"></div>
+    </div>
+    <p class="why"><b>What it means for Part A.</b> About 98% of tooth-inspections show no damage (90.6% clean, plus 7.4% auto-flagged cells that are mostly lighting artifacts). That is more imbalanced than the 94% in the proposal. Damage appears on 2–6 of the 28 teeth, only in the last one or two inspections of each gear. It jumps from none to a large crater within a single 6-hour run. Only B-11, B-14, A-16, A-28, F-9, F-12 and F-13 show a visible initiation stage first. The C0–C3 rubric therefore has very few C1/C2 examples. A three-level rubric is more defensible: none, initiation, spall. At gear level, where vibration actually operates, there are only <b>39 labeled inspections</b> (A 7, B 9, C 13, F 10), and 8 of them show damage.</p>
+  </figure>
+</section>
+
+<section id="signals">
+  <header><span class="secnum">Section 4</span><h2>Sensor signals and which indicators track damage</h2>
+  <p class="note">CIs are shown as robust z-scores against each gear's own first 12 h: (x − baseline median) / (1.4826 × MAD). A value of 10 means 10 robust standard deviations from that gear's healthy state. The y-axis uses a signed log scale because some CIs move by 10⁴ or more.</p></header>
+
+  <figure>
+    <figcaption><span class="fig-id">Figure 3</span><span class="fig-title">Condition-indicator trajectories, one panel per gear</span>
+    <span class="fig-sub">10-minute medians on a shared hours axis. Short ticks on the baseline mark run boundaries. The diamond marks the first visible damage (training gears only).</span></figcaption>
+    <div class="controls"><label for="ci-pick">Indicator</label><select id="ci-pick"></select><span id="ci-desc"></span></div>
+    <div class="grid2" id="f-traj"></div>
+  </figure>
+
+  <figure>
+    <figcaption><span class="fig-id">Table 3</span><span class="fig-title">Indicator quality, computed with Coble &amp; Hines prognostic metrics across all 7 gears</span>
+    <span class="fig-sub">Monotonicity is the mean |Σ sign(Δx)| / (n−1) on 30-min medians, 0 to 1. Trendability is the mean pairwise correlation of the gears' trajectories resampled to percent of life. Prognosability is exp(−sd of end values / mean |end − start|). End z is the median robust z over each gear's last hour. Temp |ρ| is the median within-baseline Spearman correlation with oil temperature. Gear offset is the spread of baseline medians across gears divided by the within-gear SD. Click a header to sort.</span></figcaption>
+    <div class="scroll" style="max-height:520px"><table id="t-quality"></table></div>
+    <p class="why"><b>What it means.</b> The TSA moment indicators (M8A, M6A, FM4) and FLEET_WTMADE have the highest trendability (0.47–0.66) and the largest end-of-life shifts, so they are the best candidates for the Part B feature vector. The "star" variants reach huge z-values on C and G but trend inconsistently across gears. Raw RMS, peak-to-peak and crest factor barely separate end-of-life from baseline. Temperature correlations of 0.5–0.6 on most CIs support regressing out context before scoring. Gear offsets of 2–10 within-gear SDs show why each gear needs its own baseline.</p>
+  </figure>
+
+  <figure>
+    <figcaption><span class="fig-id">Figure 4</span><span class="fig-title">Indicator redundancy (Spearman correlation of per-gear robust z, 10-min)</span>
+    <span class="fig-sub">Ordered by hierarchical clustering on 1 − |ρ|. Blocks of strongly correlated CIs carry the same information. Pick one or two per block for the Mahalanobis feature vector so the covariance is not near-singular.</span></figcaption>
+    <div class="legend" id="lg-corr"></div>
+    <div class="scroll" id="f-corr"></div>
+  </figure>
+</section>
+
+<section id="partb">
+  <header><span class="secnum">Section 5</span><h2>Part B prototype: novelty score, onset and life split</h2>
+  <p class="note">A first pass at the proposal's Figures 1 and 3, to check the pipeline end to end. Features are log M6A, M8A, FM4, NA4, energy ratio, TSA kurtosis, TSA RMS and ALR. Each is regressed on oil temperature within the baseline window, standardized, and scored with a Ledoit-Wolf Mahalanobis distance. The score is √(D²/p), roughly the average number of SDs from baseline per feature, smoothed with a 30-minute rolling median. Onset is the first 60 consecutive minutes above the 99.5th percentile of the baseline scores. The onset rule is a placeholder for the proposal's BOCPD.</p></header>
+
+  <figure>
+    <figcaption><span class="fig-id">Figure 5</span><span class="fig-title">Novelty score per gear (baseline 0.5–12 h), shared axes</span>
+    <span class="fig-sub">Log y-axis. The horizontal rule is each gear's alarm threshold. The vertical rule is the detected onset. The diamond marks the first visible photo damage. Exp-A has a gap at 6–12 h where the duplicate Run-2 was removed, so its baseline is Run-1 only; the jump at 12.6 h may be a run-to-run shift rather than damage.</span></figcaption>
+    <div class="legend" id="lg-nov"></div>
+    <div class="grid2" id="f-nov"></div>
+  </figure>
+
+  <figure>
+    <figcaption><span class="fig-id">Figure 6</span><span class="fig-title">Onset stability across baseline windows</span>
+    <span class="fig-sub">The proposal requires that C0 exit "survive changes to the baseline window". The prototype does not meet that yet: onsets move by 6–30 h depending on the window, and a 0.5–6 h baseline flags almost every gear at 6.5 h, the first run boundary.</span></figcaption>
+    <div class="legend" id="lg-onset"></div>
+    <div id="f-onset"></div>
+  </figure>
+
+  <figure>
+    <figcaption><span class="fig-id">Figure 7</span><span class="fig-title">Life split into hours before onset and after, sorted by total life</span>
+    <span class="fig-sub">Left: training gears, with onset set to the first photo showing damage. Right: all gears, with the sensor prototype onset (baseline 0.5–12 h). The table gives each variance component's share of var(total life): var(I), var(P) and 2·cov(I, P), which sum to 1.</span></figcaption>
+    <div class="legend" id="lg-life"></div>
+    <div class="grid2"><div id="f-life-photo"></div><div id="f-life-sensor"></div></div>
+    <div class="scroll"><table id="t-var"></table></div>
+    <p class="why"><b>What it means.</b> By photo evidence, visible damage appears only 0–7 h before the end of every training gear, while total life ranges from 30 h to 74 h. Nearly all of the variation in life comes from <b>when damage starts</b>, which points Part B toward onset detection. Two caveats. Subsurface cracks form before anything is visible, so photos give a late bound on onset. And the sensor prototype's variance ranking flips between baseline windows, which is exactly the fragility the proposal's robustness check is designed to catch.</p>
+  </figure>
+</section>
+
+<section id="next">
+  <header><span class="secnum">Section 6</span><h2>Recommendations for the modeling plan</h2></header>
+  <div class="findings">
+    <div class="finding"><h3>Part A target</h3><p>The challenge scores one scalar per 6-hour interval by MSE after an optimal monotonic rescaling, so only the shape of the trajectory counts. Use a gear-level damage scalar (for example the summed spall area over 28 teeth) as a regression target alongside the ordinal class. Evaluate with leave-one-gear-out cross-validation: with four labeled gears, any split within a gear leaks.</p></div>
+    <div class="finding"><h3>Part A rubric</h3><p>Start with three levels: none, initiation (a flake or pit below the contact band) and spall (a crater). Split spall into moderate and advanced only if the pilot set shows a clear area gap. The automated texture score finds large spalls on A, B and F but misses initiations and shallow spalls (F-19). Use it for triage, not as labels.</p></div>
+    <div class="finding"><h3>Part A imbalance</h3><p>Use class weights or focal loss, SMOTE only inside the training folds, and report macro-F1 and ordinal MAE rather than accuracy. For ordinal models, CORAL or cumulative-link heads keep predicted classes rank-consistent.</p></div>
+    <div class="finding"><h3>Part B features</h3><p>Start from M8A, M6A, FM4, NA4 and FLEET_WTMADE (the best trendability), plus DM4500 debris increments. Drop redundant members of each correlation block. Trim the first 20–30 min of every run and add a run-offset term before fitting the baseline covariance.</p></div>
+    <div class="finding"><h3>Part B stability</h3><p>Report Figure 6 in the final write-up with BOCPD and PELT onsets alongside the persistence rule. The initiation-versus-propagation conclusion should only be stated if the ranking holds across all rows of the variance table.</p></div>
+    <div class="finding"><h3>Fix the Similar Work section</h3><p>Carpentier, De Temmerman &amp; Verbeke (IDA 2024) used the Scania Component X truck dataset, not the PHM gear data. Describe it as similar methods on a different dataset, and add the NASA Glenn gear-pitting work (Dempsey 2000; Lewicki et al. 2010) as domain references.</p></div>
+  </div>
+  <details>
+    <summary>Sources</summary>
+    <ul class="refs">
+      <li><a href="https://data.phmsociety.org/phm-north-america-2026-conference-data-challenge/">PHM North America 2026 Data Challenge</a> (task, scoring by MSE after monotonic transform)</li>
+      <li>Samuel &amp; Pines (2005), <a href="https://www.sciencedirect.com/science/article/abs/pii/S0022460X04003244">A review of vibration-based techniques for helicopter transmission diagnostics</a>, JSV 282</li>
+      <li>Dempsey (2000), <a href="https://ntrs.nasa.gov/citations/20000120403">NASA/TM-2000-210371</a>; Lewicki, Dempsey et al. (2010), <a href="https://ntrs.nasa.gov/search.jsp?R=20110011993">gear pitting CI evaluation</a></li>
+      <li>Coble &amp; Hines (2009), <a href="https://papers.phmsociety.org/index.php/phmconf/article/view/1404">Identifying optimal prognostic parameters</a> (monotonicity, prognosability, trendability)</li>
+      <li>Adams &amp; MacKay (2007), <a href="https://arxiv.org/abs/0710.3742">Bayesian online changepoint detection</a>; Cao, Mirjalili &amp; Raschka (2020), <a href="https://arxiv.org/abs/1901.07884">CORAL ordinal regression</a></li>
+      <li>Carpentier et al. (2024), <a href="https://link.springer.com/chapter/10.1007/978-3-031-58553-1_21">IDA 2024 Industrial Challenge entry</a> (Scania trucks)</li>
+    </ul>
+  </details>
+  <p class="note">Reproduce with the scripts in <span class="mono">eda/scripts/</span> (see <span class="mono">eda/README.md</span>). The texture score and the eye-checked labels are provisional and are not the team's labeling pass.</p>
+</section>
+</div>
+<div id="tip" hidden></div>
+
+<script>
+const D=/*DATA*/null;
+const THUMBS=/*THUMBS*/null;
+const NS="http://www.w3.org/2000/svg";
+const $=s=>document.querySelector(s);
+const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+function S(tag,attrs,parent){const e=document.createElementNS(NS,tag);for(const k in attrs)e.setAttribute(k,attrs[k]);if(parent)parent.appendChild(e);return e}
+function H(tag,attrs,parent,text){const e=document.createElement(tag);for(const k in (attrs||{}))e.setAttribute(k,attrs[k]);if(text!=null)e.textContent=text;if(parent)parent.appendChild(e);return e}
+const fmt=(v,d=2)=>v==null||!isFinite(v)?"–":Math.abs(v)>=1e5?v.toExponential(1):Number(v).toLocaleString(undefined,{maximumFractionDigits:d,minimumFractionDigits:0});
+const lin=(d0,d1,r0,r1)=>v=>r0+(v-d0)/(d1-d0)*(r1-r0);
+const slog=v=>Math.sign(v)*Math.log10(1+Math.abs(v));
+const GEARS=["A","B","C","F","G","D","E"];
+const SPLIT=Object.fromEntries(D.gears.map(g=>[g.gear,g.split]));
+const FIRST=Object.fromEntries(D.gears.map(g=>[g.gear,g.first_dmg_h]));
+const END=Object.fromEntries(D.gears.map(g=>[g.gear,g.end_h]));
+const XMAX=100;
+
+/* ---------- tooltip ---------- */
+const tip=$("#tip");
+function showTip(ev,rows){tip.replaceChildren();rows.forEach(([v,l])=>{const d=H("div",{},tip);H("span",{class:"tv"},d,v);if(l){d.append(" ");H("span",{class:"tl"},d,l)}});tip.hidden=false;moveTip(ev)}
+function moveTip(ev){const x=(ev.clientX??0)+14,y=(ev.clientY??0)+14,w=tip.offsetWidth,h=tip.offsetHeight;tip.style.left=Math.min(x,innerWidth-w-8)+"px";tip.style.top=Math.min(y,innerHeight-h-8)+"px"}
+function hideTip(){tip.hidden=true}
+function focusTip(el,rows){el.setAttribute("tabindex","0");el.addEventListener("focus",()=>{const r=el.getBoundingClientRect();showTip({clientX:r.right,clientY:r.top},rows)});el.addEventListener("blur",hideTip)}
+function hover(el,rows){el.addEventListener("pointermove",e=>showTip(e,typeof rows==="function"?rows():rows));el.addEventListener("pointerleave",hideTip)}
+
+/* ---------- legend helper ---------- */
+function legend(id,items){const L=$(id);L.replaceChildren();items.forEach(([kind,color,label,extra])=>{const s=H("span",{},L);const i=H("i",{class:kind},s);if(kind==="hatch"){i.style.background=`repeating-linear-gradient(45deg,${color} 0 2px,transparent 2px 5px)`;i.style.boxShadow=`inset 0 0 0 1px ${color}`}else if(kind==="ring"){i.style.border=`2px solid ${color}`;i.style.background="transparent";i.className="dot"}else if(kind==="diamond"){i.style.background=color;i.style.transform="rotate(45deg) scale(.8)";i.style.borderRadius="1px"}else i.style.background=color;if(extra)i.style.cssText+=extra;s.append(label)})}
+
+/* ---------- KPIs ---------- */
+(function(){const k=D.kpi, dmg=(D.balance.spall||0)+(D.balance.init||0);
+ const items=[["7","gears run to failure","4 train · 1 val · 2 test"],[(k.rows/1e6).toFixed(2)+"M","one-second rows",k.files.toLocaleString()+" minute files"],[Math.round(k.minutes/60)+" h","steady-state sensor time",k.minutes.toLocaleString()+" one-minute rows"],[k.photos.toLocaleString(),"tooth photos",k.tooth_insp.toLocaleString()+" tooth-inspections"],[dmg,"damaged tooth-inspections",(100*dmg/k.tooth_insp).toFixed(1)+"% of all · eye-checked"]];
+ const K=$("#kpis");items.forEach(([v,l,n])=>{const d=H("div",{class:"kpi"},K);H("div",{class:"v"},d,v);H("div",{class:"l"},d,l);H("div",{class:"n"},d,n)})})();
+
+/* ---------- Table 1 ---------- */
+(function(){const t=$("#t-gears");const cols=[["gear","Gear","l"],["split","Split","l"],["runs","Runs"],["end_h","End of record (h)"],["sensor_h","Sensor hours"],["steady_pct","Steady %"],["torque","Torque (ft·lbf)"],["temp","Oil temp (°F)"],["rows","1-s rows"],["short_runs","Short runs"],["photo_insp","Photo inspections"],["photos","Photos"],["first_spall_insp","First visible damage","l"]];
+ const hr=H("tr",{},H("thead",{},t));cols.forEach(([k,l,c])=>H("th",{class:c||""},hr,l));const tb=H("tbody",{},t);
+ D.gears.forEach(g=>{const r=H("tr",{},tb);cols.forEach(([k,,c])=>{let v=g[k];if(k==="gear")v="Exp-"+v;else if(k==="first_spall_insp")v=v?`${v} (${fmt(g.first_dmg_h,1)} h)`:"no photos";else if(typeof v==="number")v=fmt(v,k==="torque"||k==="temp"||k==="steady_pct"?0:1);else if(v==null)v="–";const td=H("td",{class:c||""},r,v);if(k==="sensor_h"&&g.gear==="A")td.append(" ⚠")})})})();
+
+/* ---------- Figure 1 timeline ---------- */
+function drawTimeline(){const box=$("#f-timeline");box.replaceChildren();const W=box.clientWidth,L=72,R=16,rowH=30,T=8,B=30,Hh=T+GEARS.length*rowH+B;
+ const svg=S("svg",{width:W,height:Hh,role:"img","aria-label":"Run timeline per gear"},box);const x=lin(0,XMAX,L,W-R);
+ for(let h=0;h<=XMAX;h+=10){S("line",{x1:x(h),x2:x(h),y1:T,y2:Hh-B,stroke:css("--grid")},svg);S("text",{x:x(h),y:Hh-B+16,"text-anchor":"middle"},svg).textContent=h}
+ S("text",{x:W-R,y:Hh-4,"text-anchor":"end"},svg).textContent="cumulative operating hours";
+ const defs=S("defs",{},svg);const pat=S("pattern",{id:"hatch",width:5,height:5,patternUnits:"userSpaceOnUse",patternTransform:"rotate(45)"},defs);S("rect",{width:5,height:5,fill:css("--surface")},pat);S("line",{x1:0,y1:0,x2:0,y2:5,stroke:css("--s2"),"stroke-width":2},pat);
+ GEARS.forEach((g,i)=>{const y=T+i*rowH+6,h=rowH-12;S("text",{x:0,y:y+h/2+4,class:"ink"},svg).textContent="Exp-"+g;S("text",{x:40,y:y+h/2+4},svg).textContent=SPLIT[g].slice(0,5);
+  D.runs.filter(r=>r.gear===g).forEach(r=>{const w=Math.max(1,x(r.h1)-x(r.h0)-2);const rc=S("rect",{x:x(r.h0)+1,y,width:w,height:h,rx:2,fill:r.dup?"url(#hatch)":css("--s1"),"fill-opacity":r.short?0.4:1},svg);
+   const rows=[[`Run-${r.run}`,`Exp-${g}`],[`${fmt(r.h0,1)}–${fmt(r.h1,1)} h`,`(${fmt(r.h1-r.h0,2)} h)`],[`${fmt(r.temp,0)} °F`,"median oil temp"]];if(r.dup)rows.push(["Duplicate","byte copy of Run-1"]);hover(rc,rows);focusTip(rc,rows)});
+  const G=D.grid[g];if(G){[...new Set(G.hour)].forEach(hh=>S("line",{x1:x(hh),x2:x(hh),y1:y-4,y2:y,stroke:css("--ink-2"),"stroke-width":1.5},svg))}
+  if(FIRST[g]!=null){const cx=x(FIRST[g]),cy=y+h/2;S("rect",{x:cx-5,y:cy-5,width:10,height:10,transform:`rotate(45 ${cx} ${cy})`,fill:css("--ink"),stroke:css("--surface"),"stroke-width":2},svg)}
+ });
+ legend("#lg-timeline",[["",css("--s1"),"run (≈6.15 h)"],["",css("--s1"),"short run (<3 h)","opacity:.4"],["hatch",css("--s2"),"duplicate sensor data"],["line",css("--ink-2"),"photo inspection"],["diamond",css("--ink"),"first visible damage"]]);}
+
+/* ---------- Table 2 stats ---------- */
+(function(){$("#nmin").textContent=D.kpi.minutes.toLocaleString();const t=$("#t-stats");const cols=[["col","Channel","l mono"],["unit","Unit","l"],["mean","Mean"],["sd","SD"],["p1","P1"],["p50","Median"],["p99","P99"],["miss","Missing %"]];
+ const hr=H("tr",{},H("thead",{},t));cols.forEach(([,l,c])=>H("th",{class:(c||"").replace(" mono","")},hr,l));const tb=H("tbody",{},t);
+ D.stats.forEach(s=>{const r=H("tr",{},tb);cols.forEach(([k,,c])=>H("td",{class:c||""},r,k==="col"?s.col:k==="unit"?(s.unit||"–"):fmt(s[k],k==="miss"?2:3)))})})();
+
+/* ---------- thumbs ---------- */
+THUMBS.forEach(t=>{const f=H("figure",{},$("#thumbs"));const im=H("img",{src:t.src,alt:t.t+" – "+t.c,loading:"lazy"},f);H("div",{class:"c"},f,t.c);H("div",{class:"t"},f,t.t)});
+
+/* ---------- Figure 2 heatmap ---------- */
+function drawHeat(){const box=$("#f-heat");box.replaceChildren();
+ ["A","B","C","F"].forEach(g=>{const G=D.grid[g];const wrap=H("div",{},box);H("div",{class:"note",style:"font-weight:500;color:var(--ink);margin-bottom:4px"},wrap,`Exp-${g} · ${G.insp.length} inspections`);
+  const W=colW(box,240),L=26,T=4,B=56,n=G.insp.length,cw=(W-L-4)/n,ch=11,Hh=T+28*ch+B;
+  const svg=S("svg",{width:W,height:Hh,role:"img","aria-label":`Damage map Exp-${g}`},wrap);
+  const firstIdx=G.eye[0].map((_,j)=>j).find(j=>G.eye.some(r=>r[j]));
+  for(let t=0;t<28;t++){if(t%3===0)S("text",{x:L-6,y:T+t*ch+ch-2,"text-anchor":"end"},svg).textContent=t+1;
+   for(let j=0;j<n;j++){const v=G.cells[t][j],e=G.eye[t][j];let fill=css("--q0");let cls="no visible damage";
+    if(e==="spall"){fill=css("--q3");cls="spall (eye-checked)"}else if(e==="init"){fill=css("--q2");cls="initiation (eye-checked)"}else if(v!=null&&v>=0.02){fill=css("--q1");cls="auto-flagged, not reviewed"}
+    if(v==null){fill="transparent"}
+    const r=S("rect",{x:L+j*cw+1,y:T+t*ch+1,width:Math.max(1,cw-2),height:ch-2,rx:1.5,fill},svg);
+    if(v!=null){const rows=[[cls,""],[`tooth ${t+1}`,`${G.insp[j]} · ${fmt(G.hour[j],1)} h`],[fmt(v,3),"texture score"]];hover(r,rows)}}}
+  G.insp.forEach((lab,j)=>{const tx=S("text",{x:L+j*cw+cw/2,y:T+28*ch+8,"text-anchor":"end",transform:`rotate(-60 ${L+j*cw+cw/2} ${T+28*ch+8})`},svg);tx.textContent=lab.replace("Run-","R").replace("Break-In","Brk").replace("Test-Start","Start").replace("Pre-Run","Pre")});
+  if(firstIdx!=null){const cx=L+firstIdx*cw+cw/2,cy=T-2;S("rect",{x:cx-4,y:cy-4,width:8,height:8,transform:`rotate(45 ${cx} ${cy})`,fill:css("--ink"),stroke:css("--surface"),"stroke-width":2},svg)}
+ });
+ legend("#lg-heat",[["",css("--q0"),"no visible damage"],["",css("--q1"),"auto-flagged, not reviewed"],["",css("--q2"),"initiation"],["",css("--q3"),"spall"],["diamond",css("--ink"),"first visible damage"]]);
+ const bb=$("#f-balance");bb.replaceChildren();const b=D.balance,tot=Object.values(b).reduce((a,c)=>a+c,0);const W=bb.clientWidth,Hh=20;const svg=S("svg",{width:W,height:Hh},bb);
+ let x0=0;[["healthy","--q0","no visible damage"],["ambiguous","--q1","auto-flagged"],["init","--q2","initiation"],["spall","--q3","spall"]].forEach(([k,c,l])=>{const v=b[k]||0,w=v/tot*W;const r=S("rect",{x:x0,y:0,width:Math.max(2,w-2),height:20,rx:0,fill:css(c)},svg);hover(r,[[`${v} (${(100*v/tot).toFixed(1)}%)`,l]]);focusTip(r,[[`${v} (${(100*v/tot).toFixed(1)}%)`,l]]);
+  x0+=w});
+ const lg=H("div",{class:"legend",style:"margin-top:6px"},bb);[["healthy","--q0","no visible damage"],["ambiguous","--q1","auto-flagged"],["init","--q2","initiation"],["spall","--q3","spall"]].forEach(([k,c,l])=>{const v=b[k]||0;const sp=H("span",{},lg);const i=H("i",{},sp);i.style.background=css(c);sp.append(`${l}: ${v} (${(100*v/tot).toFixed(1)}%)`)});}
+
+/* ---------- small multiples helper ---------- */
+function colW(box,min){const bw=box.clientWidth||600,gap=16,c=Math.max(1,Math.floor((bw+gap)/(min+gap)));return Math.floor((bw-gap*(c-1))/c)}
+function panel(box,g,{yFn,ticks,height=150,draw}){const wrap=H("div",{},box);const W=colW(box,460),L=44,R=10,T=18,B=24,Hh=height;
+ const svg=S("svg",{width:W,height:Hh,role:"img","aria-label":`Exp-${g}`},wrap);const x=lin(0,XMAX,L,W-R);const y=yFn(T,Hh-B);
+ S("text",{x:L,y:11,class:"strong"},svg).textContent=`Exp-${g}`;S("text",{x:L+44,y:11},svg).textContent=SPLIT[g];
+ ticks.forEach(([v,l])=>{S("line",{x1:L,x2:W-R,y1:y(v),y2:y(v),stroke:css("--grid")},svg);S("text",{x:L-6,y:y(v)+4,"text-anchor":"end"},svg).textContent=l});
+ for(let h=0;h<=XMAX;h+=20)S("text",{x:x(h),y:Hh-6,"text-anchor":"middle"},svg).textContent=h+(h===XMAX?" h":"");
+ D.runs.filter(r=>r.gear===g&&r.run>1).forEach(r=>S("line",{x1:x(r.h0),x2:x(r.h0),y1:Hh-B,y2:Hh-B-5,stroke:css("--axis")},svg));
+ S("line",{x1:L,x2:W-R,y1:Hh-B,y2:Hh-B,stroke:css("--axis")},svg);
+ draw(svg,x,y,{L,R,T,B,W,Hh});return svg}
+function crosshair(svg,x,dims,g,getRows){const {L,R,T,B,W,Hh}=dims;const hl=S("line",{y1:T,y2:Hh-B,stroke:css("--ink-2"),"stroke-width":1,visibility:"hidden"},svg);
+ const hit=S("rect",{x:L,y:T,width:W-L-R,height:Hh-B-T,fill:"transparent"},svg);
+ hit.addEventListener("pointermove",e=>{const r=svg.getBoundingClientRect();const hx=(e.clientX-r.left-L)/(W-L-R)*XMAX;const rows=getRows(hx);if(!rows){hideTip();hl.setAttribute("visibility","hidden");return}hl.setAttribute("x1",x(rows.h));hl.setAttribute("x2",x(rows.h));hl.setAttribute("visibility","visible");showTip(e,rows.rows)});
+ hit.addEventListener("pointerleave",()=>{hideTip();hl.setAttribute("visibility","hidden")})}
+function nearest(arr,v){let lo=0,hi=arr.length-1;while(hi-lo>1){const m=(lo+hi)>>1;if(arr[m]<v)lo=m;else hi=m}return Math.abs(arr[lo]-v)<Math.abs(arr[hi]-v)?lo:hi}
+function pathOf(xs,ys,x,y){let d="",pen=false;for(let i=0;i<xs.length;i++){const v=ys[i];if(v==null||!isFinite(v)||(i>0&&xs[i]-xs[i-1]>0.5)){pen=false;if(v==null||!isFinite(v))continue}d+=(pen?"L":"M")+x(xs[i]).toFixed(1)+","+y(v).toFixed(1);pen=true}return d}
+function diamond(svg,cx,cy){S("rect",{x:cx-5,y:cy-5,width:10,height:10,transform:`rotate(45 ${cx} ${cy})`,fill:css("--ink"),stroke:css("--surface"),"stroke-width":2},svg)}
+
+/* ---------- Figure 3 trajectories ---------- */
+const CI_NOTES={ci_fm4:"kurtosis of the difference signal; early for damage on a few teeth",ci_m6a:"6th moment of difference signal; peak-sensitive surface-damage CI",ci_m8a:"8th moment of difference signal; very peak-sensitive",ci_na4:"residual kurtosis normalized by running variance; tracks damage as it spreads",ci_e_ratio:"energy ratio; responds to distributed damage, late",ci_fm0:"peak-to-peak / mesh harmonics; heavy damage, late",ci_rms:"overall RMS; late-stage indicator",ci_fleet_wtmade:"dataset-specific fleet model score (no public definition found)",ci_alr:"average log ratio of mesh harmonics",dm:"DM4500 oil-debris counter, sum of bins (raw cumulative count, not z)"};
+const ciSel=$("#ci-pick");
+const ciOrder=[...D.stats.filter(s=>s.col.startsWith("ci_"))].sort((a,b)=>(b.trend??-1)-(a.trend??-1)).map(s=>s.col);
+[["dm","DM4500 debris count"],...ciOrder.map(c=>[c,c.replace("ci_","").toUpperCase()])].forEach(([v,l])=>H("option",{value:v},ciSel,l));
+ciSel.value="ci_m8a";
+function drawTraj(){const c=ciSel.value;$("#ci-desc").textContent=CI_NOTES[c]||"";const box=$("#f-traj");box.replaceChildren();
+ let lo=0,hi=1;
+ if(c==="dm"){GEARS.forEach(g=>D.traj[g].dm.forEach(v=>{hi=Math.max(hi,v)}))}else{GEARS.forEach(g=>D.traj[g][c].forEach(v=>{if(v!=null){lo=Math.min(lo,slog(v));hi=Math.max(hi,slog(v))}}))}
+ hi=c==="dm"?Math.ceil(hi/100)*100:Math.ceil(hi);lo=c==="dm"?0:Math.floor(lo);
+ const ticks=c==="dm"?[0,hi/2,hi].map(v=>[v,fmt(v,0)]):(()=>{const t=[];for(let k=lo;k<=hi;k++)t.push([k,k===0?"0":(k<0?"−":"")+"10"+(Math.abs(k)===1?"":["","","²","³","⁴","⁵","⁶","⁷","⁸","⁹"][Math.abs(k)])]);return t.length>7?t.filter((_,i)=>i%2===0||t[i][0]===0):t})();
+ GEARS.forEach(g=>{const T=D.traj[g];const xs=c==="dm"?T.dm_h:T.h;const ys=c==="dm"?T.dm:T[c].map(v=>v==null?null:slog(v));
+  panel(box,g,{yFn:(t,b)=>lin(lo,hi,b,t),ticks,draw:(svg,x,y,dims)=>{
+   if(c!=="dm")S("line",{x1:dims.L,x2:dims.W-dims.R,y1:y(0),y2:y(0),stroke:css("--axis")},svg);
+   S("path",{d:pathOf(xs,ys,x,y),fill:"none",stroke:css("--s1"),"stroke-width":2,"stroke-linejoin":"round","stroke-linecap":"round"},svg);
+   if(FIRST[g]!=null)diamond(svg,x(FIRST[g]),dims.T+2);
+   crosshair(svg,x,dims,g,hx=>{if(hx>END[g]+1||hx<0)return null;const i=nearest(xs,hx);const raw=c==="dm"?T.dm[i]:T[c][i];return{h:xs[i],rows:[[fmt(raw,c==="dm"?0:1),c==="dm"?"particles (cumulative)":"robust z"],[`${fmt(xs[i],1)} h`,`Exp-${g}`]]}});
+  }})})}
+ciSel.addEventListener("change",drawTraj);
+
+/* ---------- Table 3 quality ---------- */
+const QCOLS=[["col","Indicator","l mono"],["trend","Trendability","bar"],["mono","Monotonicity","bar"],["prog","Prognosability","bar"],["end_z","End z (median)"],["temp_rho","Temp |ρ|"],["offset","Gear offset (SD)"]];
+let qSort="trend",qDir=-1;
+function drawQuality(){const t=$("#t-quality");t.replaceChildren();const hr=H("tr",{},H("thead",{},t));
+ QCOLS.forEach(([k,l,c])=>{const th=H("th",{class:"sort "+(c==="l mono"?"l":""),tabindex:"0"},hr,l);if(k===qSort)th.setAttribute("aria-sort",qDir<0?"descending":"ascending");const go=()=>{qDir=qSort===k?-qDir:-1;qSort=k;drawQuality()};th.addEventListener("click",go);th.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();go()}})});
+ const rows=D.stats.filter(s=>s.col.startsWith("ci_")).sort((a,b)=>k(a,b));function k(a,b){const x=a[qSort],y=b[qSort];if(typeof x==="string")return qDir*(x<y?-1:1)*-1;return qDir*((x??-1e9)-(y??-1e9))}
+ const tb=H("tbody",{},t);rows.forEach(s=>{const r=H("tr",{},tb);QCOLS.forEach(([k,,c])=>{const td=H("td",{class:c==="bar"?"l":c||""},r);if(k==="col"){td.textContent=s.col.replace("ci_","").toUpperCase();return}const v=s[k];if(c==="bar"){const w=Math.max(0,Math.min(1,v??0))*90;const b=H("span",{class:"bar"},td);b.style.width=w+"px";td.append(fmt(v,2));td.style.minWidth="150px"}else td.textContent=fmt(v,k==="end_z"?1:2)})})}
+
+/* ---------- Figure 4 corr ---------- */
+function drawCorr(){const box=$("#f-corr");box.replaceChildren();const C=D.corr,n=C.cols.length,L=96,T=96,cs=Math.max(14,Math.min(22,((box.clientWidth||700)-L-10)/n));const W=L+n*cs+4,Hh=T+n*cs+4;
+ const svg=S("svg",{width:W,height:Hh,role:"img","aria-label":"Correlation matrix"},box);
+ const mix=(a,b,t)=>{const p=h=>[1,3,5].map(i=>parseInt(h.slice(i,i+2),16));const A=p(a),B=p(b);return"rgb("+A.map((v,i)=>Math.round(v+(B[i]-v)*t)).join(",")+")"};
+ const mid=css("--mid"),neg=css("--neg"),pos=css("--pos");
+ C.cols.forEach((c,i)=>{const lab=c.replace("ci_","").toUpperCase();S("text",{x:L-6,y:T+i*cs+cs/2+4,"text-anchor":"end"},svg).textContent=lab;const tx=S("text",{x:L+i*cs+cs/2+4,y:T-6,"text-anchor":"start",transform:`rotate(-60 ${L+i*cs+cs/2+4} ${T-6})`},svg);tx.textContent=lab;
+  C.cols.forEach((d,j)=>{const v=C.m[i][j];const r=S("rect",{x:L+j*cs+1,y:T+i*cs+1,width:cs-2,height:cs-2,rx:2,fill:v>=0?mix(mid,pos,Math.min(1,v)):mix(mid,neg,Math.min(1,-v))},svg);hover(r,[[fmt(v,2),"Spearman ρ"],[lab,"× "+d.replace("ci_","").toUpperCase()]])})});
+ legend("#lg-corr",[["",neg,"ρ = −1"],["",mid,"0"],["",pos,"ρ = +1"]]);}
+
+/* ---------- Figure 5 novelty ---------- */
+function drawNov(){const box=$("#f-nov");box.replaceChildren();let hi=0;GEARS.forEach(g=>D.nov[g].s.forEach(v=>{if(v)hi=Math.max(hi,v)}));const lo=Math.log10(0.4),top=Math.log10(hi*1.2);
+ const ticks=[0.5,1,3,10,30,100].filter(v=>Math.log10(v)<=top).map(v=>[Math.log10(v),String(v)]);
+ GEARS.forEach(g=>{const N=D.nov[g];panel(box,g,{yFn:(t,b)=>lin(lo,top,b,t),ticks,draw:(svg,x,y,dims)=>{
+   const ly=N.s.map(v=>v&&v>0?Math.log10(v):null);
+   S("line",{x1:dims.L,x2:x(END[g]),y1:y(Math.log10(N.thr)),y2:y(Math.log10(N.thr)),stroke:css("--s2"),"stroke-width":1.5},svg);
+   S("path",{d:pathOf(N.h,ly,x,y),fill:"none",stroke:css("--s1"),"stroke-width":2,"stroke-linejoin":"round"},svg);
+   if(N.onset!=null){S("line",{x1:x(N.onset),x2:x(N.onset),y1:dims.T,y2:dims.Hh-dims.B,stroke:css("--ink"),"stroke-width":1.5},svg);S("text",{x:x(N.onset)+4,y:dims.T+10,class:"ink"},svg).textContent=`onset ${fmt(N.onset,1)} h`}
+   if(FIRST[g]!=null)diamond(svg,x(FIRST[g]),dims.T+2);
+   crosshair(svg,x,dims,g,hx=>{if(hx>END[g]+1||hx<0)return null;const i=nearest(N.h,hx);return{h:N.h[i],rows:[[fmt(N.s[i],2),"novelty score"],[fmt(N.thr,2),"threshold"],[`${fmt(N.h[i],1)} h`,`Exp-${g}`]]}});
+ }})});
+ legend("#lg-nov",[["line",css("--s1"),"novelty score (30-min median)"],["line",css("--s2"),"alarm threshold (99.5th pct of baseline)"],["line",css("--ink"),"detected onset"],["diamond",css("--ink"),"first visible photo damage"]]);}
+
+/* ---------- Figure 6 onset stability ---------- */
+const CFG=Object.keys(D.onsets);const CFGC=["--s1","--s2","--s3"];
+function drawOnset(){const box=$("#f-onset");box.replaceChildren();const W=box.clientWidth,L=72,R=16,rowH=28,T=6,B=30,Hh=T+GEARS.length*rowH+B;const svg=S("svg",{width:W,height:Hh,role:"img","aria-label":"Onset by baseline window"},box);const x=lin(0,XMAX,L,W-R);
+ for(let h=0;h<=XMAX;h+=10){S("line",{x1:x(h),x2:x(h),y1:T,y2:Hh-B,stroke:css("--grid")},svg);S("text",{x:x(h),y:Hh-B+16,"text-anchor":"middle"},svg).textContent=h}
+ S("text",{x:W-R,y:Hh-4,"text-anchor":"end"},svg).textContent="hours";
+ GEARS.forEach((g,i)=>{const cy=T+i*rowH+rowH/2;S("text",{x:0,y:cy+4,class:"ink"},svg).textContent="Exp-"+g;
+  S("line",{x1:x(0),x2:x(END[g]),y1:cy,y2:cy,stroke:css("--axis"),"stroke-width":2,"stroke-linecap":"round"},svg);S("line",{x1:x(END[g]),x2:x(END[g]),y1:cy-7,y2:cy+7,stroke:css("--ink-2"),"stroke-width":2},svg);
+  if(FIRST[g]!=null)diamond(svg,x(FIRST[g]),cy);
+  CFG.forEach((k,j)=>{const v=D.onsets[k][g];if(v==null)return;const c=S("circle",{cx:x(v),cy:cy+(j-1)*5,r:5,fill:css(CFGC[j]),stroke:css("--surface"),"stroke-width":2},svg);const hit=S("circle",{cx:x(v),cy:cy+(j-1)*5,r:12,fill:"transparent"},svg);hover(hit,[[`${fmt(v,1)} h`,"onset"],[k,`Exp-${g}`]])});
+ });
+ legend("#lg-onset",[...CFG.map((k,j)=>["dot",css(CFGC[j]),"onset, "+k]),["diamond",css("--ink"),"first visible photo damage"],["line",css("--ink-2"),"end of record","width:2px;height:12px;vertical-align:-2px"]]);}
+
+/* ---------- Figure 7 life split ---------- */
+function lifeBars(id,rows,title){const box=$(id);box.replaceChildren();H("div",{class:"note",style:"font-weight:500;color:var(--ink);margin-bottom:4px"},box,title);
+ rows=[...rows].sort((a,b)=>(a.init+a.prop)-(b.init+b.prop));const W=colW(box,260),L=52,R=40,rowH=26,T=4,B=26,Hh=T+rows.length*rowH+B;const svg=S("svg",{width:W,height:Hh},box);const x=lin(0,XMAX,L,W-R);
+ for(let h=0;h<=XMAX;h+=20){S("line",{x1:x(h),x2:x(h),y1:T,y2:Hh-B,stroke:css("--grid")},svg);S("text",{x:x(h),y:Hh-B+16,"text-anchor":"middle"},svg).textContent=h}
+ rows.forEach((r,i)=>{const y=T+i*rowH+5,h=Math.min(16,rowH-10);S("text",{x:0,y:y+h/2+4,class:"ink"},svg).textContent="Exp-"+r.gear;
+  const a=S("rect",{x:x(0),y,width:Math.max(0,x(r.init)-x(0)-1),height:h,fill:css("--s1")},svg);
+  const pw=x(r.init+r.prop)-x(r.init)-1;const b=S("rect",{x:x(r.init)+1,y,width:Math.max(pw,0),height:h,rx:pw>8?4:0,fill:css("--s2")},svg);
+  if(pw>8)S("rect",{x:x(r.init)+1,y,width:Math.min(4,pw),height:h,fill:css("--s2")},svg);
+  const rowsT=[[`${fmt(r.init,1)} h`,"to onset"],[`${fmt(r.prop,1)} h`,"onset to end"],[`${fmt(r.init+r.prop,1)} h`,"total"]];hover(a,rowsT);hover(b,rowsT);
+  S("text",{x:x(r.init+r.prop)+4,y:y+h/2+4},svg).textContent=fmt(r.init+r.prop,0)+" h"});}
+function varShares(rows){const I=rows.map(r=>r.init),P=rows.map(r=>r.prop),T=rows.map((r,i)=>I[i]+P[i]);const m=a=>a.reduce((s,v)=>s+v,0)/a.length;const v=a=>{const mu=m(a);return m(a.map(x=>(x-mu)**2))};const cov=(a,b)=>{const ma=m(a),mb=m(b);return m(a.map((x,i)=>(x-ma)*(b[i]-mb)))};const vt=v(T);return{init:v(I)/vt,prop:v(P)/vt,cov:2*cov(I,P)/vt,n:rows.length}}
+function drawLife(){const photo=D.gears.filter(g=>g.first_dmg_h!=null).map(g=>({gear:g.gear,init:g.first_dmg_h,prop:g.end_h-g.first_dmg_h}));
+ lifeBars("#f-life-photo",photo,"Training gears · onset = first visible photo damage");
+ lifeBars("#f-life-sensor",D.life[CFG[1]].rows,"All gears · onset = sensor prototype (baseline 0.5–12 h)");
+ legend("#lg-life",[["",css("--s1"),"hours to onset (initiation)"],["",css("--s2"),"hours from onset to end (propagation)"]]);
+ const t=$("#t-var");t.replaceChildren();const hr=H("tr",{},H("thead",{},t));["Onset definition","Gears","var(I) share","var(P) share","2·cov share","Largest share"].forEach((l,i)=>H("th",{class:i===0?"l":""},hr,l));
+ const tb=H("tbody",{},t);const all=[["Photo, first visible damage",varShares(photo)],...CFG.map(k=>["Sensor prototype, "+k,{...D.life[k].var,n:D.life[k].n}])];
+ all.forEach(([l,s])=>{const r=H("tr",{},tb);H("td",{class:"l"},r,l);H("td",{},r,s.n);["init","prop","cov"].forEach(k=>H("td",{},r,fmt(s[k],2)));const top=["init","prop","cov"].reduce((a,b)=>s[a]>s[b]?a:b);H("td",{},r,{init:"initiation",prop:"propagation",cov:"covariance"}[top])});}
+
+function drawAll(){drawTimeline();drawHeat();drawTraj();drawQuality();drawCorr();drawNov();drawOnset();drawLife()}
+drawAll();
+let rt;addEventListener("resize",()=>{clearTimeout(rt);rt=setTimeout(drawAll,150)});
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change",drawAll);
+new MutationObserver(drawAll).observe(document.documentElement,{attributes:true,attributeFilter:["data-theme"]});
+</script>
