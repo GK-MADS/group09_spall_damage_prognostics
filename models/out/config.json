@@ -1,0 +1,29 @@
+{
+ "hi": "tooth_maha",
+ "monotone": "iso",
+ "feats": [
+  "ci_fm4",
+  "ci_m6a",
+  "ci_m8a",
+  "ci_na4",
+  "ci_e_ratio",
+  "ci_kurtosis_tsa",
+  "ci_rms_tsa",
+  "ci_alr",
+  "ci_fm0",
+  "ci_crest_tsa",
+  "ci_kurtosis_e_op",
+  "ci_rms_e_op"
+ ],
+ "tooth": [
+  "ci_fm4",
+  "ci_m6a",
+  "ci_m8a",
+  "ci_na4"
+ ],
+ "base_h": [
+  0.5,
+  6.0
+ ],
+ "tail_min": 60
+}

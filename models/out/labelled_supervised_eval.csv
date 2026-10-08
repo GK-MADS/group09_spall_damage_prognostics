@@ -1,0 +1,9 @@
+model,mean_ex,max,top3,CF_photo
+"ridge all CIs, alpha=0.1",0.06202,0.03413,0.05526,0.01693
+"ridge all CIs, alpha=10",0.06202,0.03413,0.05526,0.01693
+"ridge all CIs, alpha=1000",0.02671,0.01041,0.01408,0.01693
+"ridge tooth CIs, alpha=0.1",0.00488,0.00068,0.00206,0.01834
+"ridge tooth CIs, alpha=10",0.00488,0.00068,0.00206,0.01834
+"ridge tooth CIs, alpha=1000",0.00846,0.00266,0.00524,0.01834
+unsupervised tooth_maha (previous default),0.00846,0.00266,0.00524,0.01778
+elapsed hours,0.00723,0.00985,0.01887,0.04504

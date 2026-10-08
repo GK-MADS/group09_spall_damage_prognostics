@@ -22,3 +22,32 @@ export PHM_TEST_SHARE_PASSWORD=<password from the challenge>   # only needed for
 .venv/bin/python scripts/phm_data.py small        # ~1.7 GB: LF, CI, photos, submission templates
 .venv/bin/python scripts/flatten_hdf5.py          # writes data/<split>/lf_1s.parquet and particles.parquet
 ```
+
+## Unsupervised damage model
+
+`models/spall_hi.py` builds a health index (HI) without damage labels and writes challenge submissions to `models/out/`.
+
+```bash
+uv pip install --python .venv/bin/python scikit-learn scipy pytest
+.venv/bin/python models/spall_hi.py          # LOGO evaluation + models/out/{validation,test}_submission.csv
+.venv/bin/python -m pytest tests -q
+```
+
+Each gear is referenced to its own healthy first hours (0.5–6 h) after regressing out temperature and torque.
+Healthy-state models are fit on pooled training baselines only; the submitted HI is the upward departure of the
+tooth-damage CIs (FM4, M6A, M8A, NA4), taken as the median of each run's last hour and made non-decreasing per
+gear with isotonic regression. The by-eye photo labels are used only to compare candidates under an approximation
+of the challenge metric (MSE after the best monotone rescaling).
+
+### Using the Exp-A / Exp-B spall labels
+
+`data/labels/spall_scores.csv` holds the per-tooth spall scores (1.0 = healthy) at each run end for Exp-A and Exp-B.
+`models/spall_supervised.py` uses them in two ways and writes `models/out/labelled_*`:
+
+```bash
+PYTHONPATH=models .venv/bin/python models/spall_supervised.py
+```
+
+1. A non-negative ridge fit on the labels (compared A↔B leave-one-gear-out; written as the alternate `labelled_ridge_*` files).
+2. Label-driven tuning of the unsupervised HI across 96 settings, scored on the A/B labels and the Exp-C/F photo proxy.
+   The winner (FM4 upward departure, last 60 min of each run, running max) is the primary `labelled_*_submission.csv`.

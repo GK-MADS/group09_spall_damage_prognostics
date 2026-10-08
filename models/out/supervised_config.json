@@ -1,0 +1,21 @@
+{
+ "target": "mean_ex",
+ "alpha": 1000,
+ "weights": {
+  "fm4+": 0.01649,
+  "m6a+": 0.01309,
+  "m8a+": 0.00868,
+  "na4+": 0.01785,
+  "e_ratio+": 0.00642,
+  "kurtosis_tsa+": 0.0026,
+  "crest_tsa+": 0.03314,
+  "kurtosis_e_op+": 0.02656,
+  "e_ratio-": 0.0056,
+  "rms_tsa-": 0.03137,
+  "alr-": 0.0061,
+  "fm0-": 0.01969,
+  "crest_tsa-": 0.00012,
+  "kurtosis_e_op-": 3e-05,
+  "rms_e_op-": 0.02039
+ }
+}
