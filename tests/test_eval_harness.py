@@ -86,3 +86,100 @@ def test_healthy_model_feats_default_and_subset():
     pd.testing.assert_frame_equal(a, b)
     c = HealthyModel(TOOTH, TOOTH).fit(z).score(z)
     assert c.maha.notna().all() and not np.allclose(c.maha, a.maha)
+
+
+from pathlib import Path
+
+from models.eval import harness as H
+
+
+class Spy:
+    """Approach that records what it was given."""
+
+    n_tuned, kind, name = 0, "baseline", "spy"
+
+    def __init__(self, log):
+        self.log, self.threshold = log, 0.0
+
+    def fit(self, z, ends, lab):
+        self.log.append(("fit", set(z.experiment), set(ends.experiment), set(lab.experiment)))
+        return self
+
+    def score(self, z, ends):
+        self.log.append(("score", set(z.experiment), set(ends.experiment)))
+        return ends[["experiment", "run_num", "end_h"]].assign(score=ends.end_h.to_numpy())
+
+
+def synth_dataset(drop=()):
+    m = synth_minutes(drop=drop)
+    return H.Dataset(
+        minutes=m,
+        z=condition_correct(m),
+        ends=synth_ends(),
+        lab=synth_labels(),
+        debris=pd.DataFrame(dict(experiment=np.repeat(GEARS, 4), run_num=np.tile([1, 2, 3, 4], 4), debris_rate=1.0)),
+    )
+
+
+def test_run_folds_never_shows_the_held_out_gear_to_fit():
+    log = []
+    fr = H.run_folds(lambda: Spy(log), synth_dataset())
+    fits = [e for e in log if e[0] == "fit"]
+    scores = [e for e in log if e[0] == "score"]
+    assert len(fits) == 4
+    for (_, zg, eg, lg), (_, sg, seg) in zip(fits, scores):
+        (held,) = sg
+        assert held not in zg | eg | lg and seg == {held}
+    assert set(fr.runs.columns) >= {"experiment", "run_num", "end_h", "score", "threshold", "photo", "spall", "mean_ex"}
+    assert fr.runs.mean_ex.notna().sum() == 8  # only Exp-A/B folds carry T2
+
+
+def test_sign_flip_p_exact_values():
+    assert H.sign_flip_p([1, 2, 3, 4]) == 1 / 16 == H.p_floor(4)
+    assert H.sign_flip_p([1, 2]) == 1 / 4 == H.p_floor(2)
+    assert H.sign_flip_p([0, 0, 0, 0]) == 1.0
+    assert H.sign_flip_p([1, -1, 2, 3]) == 3 / 16
+
+
+def test_bootstrap_range_is_seeded_and_ordered():
+    lo, hi = H.bootstrap_range([0.01, 0.02, 0.03, 0.10])
+    assert lo <= hi and (lo, hi) == H.bootstrap_range([0.01, 0.02, 0.03, 0.10])
+
+
+def _runs(scores, photo, spall, threshold=0.5, gear="Exp-X"):
+    n = len(scores)
+    return pd.DataFrame(
+        dict(experiment=gear, run_num=range(1, n + 1), end_h=np.arange(1, n + 1) * 6.0, score=scores,
+             threshold=threshold, photo=photo, spall=spall, mean_ex=np.nan)
+    )
+
+
+def test_detection_counts_and_lead_time():
+    a = _runs([0.1, 0.9, 0.9, 0.9], [0, 0, 1, 2], [False, False, False, True])  # alarm 12 h early, 1 false alarm
+    b = _runs([0.1, 0.1, 0.1, 0.1], [0, 0, 0, 2], [False, False, False, True], gear="Exp-Y")  # never flagged
+    c = _runs([0.1, 0.1, 0.1, 0.9], [0, 0, 2, 2], [False, False, True, True], gear="Exp-Z")  # 6 h late
+    r = pd.concat([a, b, c])
+    d = H.detection(r)
+    assert (d["caught"], d["missed"], d["false_alarms"]) == (2, 2, 1)
+    assert np.isclose(d["f1"], 4 / 7)
+    lt = H.lead_times(r)
+    assert lt["Exp-X"] == 12.0 and np.isnan(lt["Exp-Y"]) and lt["Exp-Z"] == -6.0
+
+
+def test_evaluate_runs_constant_score_gives_nan_spearman_finite_mse():
+    r = pd.concat([_runs([1.0] * 4, [0, 0, 1, 2], [False] * 3 + [True], gear=g) for g in ["Exp-X", "Exp-Y"]])
+    s, gear = H.evaluate_runs(r, "photo")
+    assert np.isnan(s["spearman"]) and np.isfinite(s["mse_pooled"]) and len(gear) == 2
+
+
+def test_gear_error_uses_pooled_map_so_hours_is_not_perfect():
+    # hours rises identically on both gears but damage arrives at different times: pooled map cannot fit both
+    a = _runs([6, 12, 18, 24.0], [0, 0, 0, 2], [False] * 3 + [True], gear="Exp-X")
+    b = _runs([6, 12, 18, 24.0], [0, 2, 2, 2], [False, True, True, True], gear="Exp-Y")
+    s, gear = H.evaluate_runs(pd.concat([a, b]), "photo")
+    assert s["mse_per_gear"] == 0.0 and gear.min() > 0
+
+
+def test_load_dataset_missing_parquet_names_the_recreate_command(tmp_path):
+    with pytest.raises(FileNotFoundError, match="scripts/flatten_hdf5.py"):
+        H.load_dataset(tmp_path)
