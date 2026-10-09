@@ -1,0 +1,10 @@
+{
+ "p_floor_2": 0.25,
+ "p_floor_4": 0.0625,
+ "ranking_changes_on_checked_only": true,
+ "selection_bias_gap_t1": 0.00266,
+ "winner": "hi_tooth_maha",
+ "winner_k_of_4": 4,
+ "winner_mse_pooled_t1": 0.01251,
+ "winner_p_vs_hours": 0.0625
+}

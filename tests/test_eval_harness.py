@@ -221,3 +221,25 @@ def test_ridge_default_design_matches_existing_model():
     z = synth_dataset().z
     r = A.RidgeApproach(TOOTH)
     assert np.allclose(r.design(z[TOOTH].to_numpy()), RidgeDamage(TOOTH).design(z))
+
+
+def test_winner_rule_order():
+    from models.eval.compare import rank_approaches
+
+    t = pd.DataFrame(
+        dict(kind=["unsupervised", "supervised", "baseline", "semi-supervised"], k_beats_hours=[3, 3, 4, 2],
+             t1_mse_pooled=[0.02, 0.01, 0.0, 0.001], n_tuned=[0, 1, 0, 96]),
+        index=["a", "b", "hours", "c"],
+    )
+    assert rank_approaches(t) == ["b", "a", "c"]
+
+
+def test_winner_rule_excludes_in_sample_rows():
+    from models.eval.compare import rank_approaches
+
+    t = pd.DataFrame(
+        dict(kind=["semi-supervised", "semi-supervised"], k_beats_hours=[4, 4], t1_mse_pooled=[0.01, 0.02],
+             n_tuned=[96, 96], in_sample=[True, False]),
+        index=["tuned_nonnested", "tuned_nested"],
+    )
+    assert rank_approaches(t) == ["tuned_nested"]

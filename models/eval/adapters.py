@@ -117,6 +117,7 @@ class LabelTuned:
     def __init__(self, minutes: pd.DataFrame, nested: bool = True, fixed: dict | None = None):
         self.minutes, self.nested = minutes, nested
         self.name = "tuned_nested" if nested else "tuned_nonnested"
+        self.in_sample = not nested  # setting chosen on all labels, including the held-out gear's
         self.fixed = fixed or json.loads(TUNED_CONFIG.read_text())
 
     @staticmethod
