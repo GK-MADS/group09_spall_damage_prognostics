@@ -118,14 +118,18 @@ Rows 4n and 4 are both reported; their gap measures selection bias.
 
 ### Folds
 
-- T1: leave-one-gear-out over the 4 training gears. Supervised approaches train on the labelled gears present in
-  the fold (A and/or B) and are scored on the held-out gear.
-- T2: A↔B two-fold.
+- One set of folds for both targets: leave-one-gear-out over the 4 training gears. Supervised approaches train on
+  the labelled gears present in the fold (A and/or B) and are scored on the held-out gear.
+- T1 is scored on all 4 held-out gears; T2 only on the folds holding out Exp-A or Exp-B (the A↔B comparison).
 - Unsupervised healthy models are always refit without the held-out gear.
 
 ### Metrics
 
 - `challenge_score`: `mse_pooled`, `mse_per_gear`, `spearman`.
+- **Gear error** (used for every per-gear comparison): fit one isotonic map on all held-out run ends of an approach
+  (the pooled map), then average the squared residuals within each gear. `mse_per_gear` is reported but not used to
+  compare approaches: photo truth is non-decreasing within a gear and every approach's run-end output is made
+  non-decreasing, so a per-gear map fits almost perfectly for any approach (elapsed hours scores exactly 0).
 - Detection: a run end is flagged when its score exceeds a threshold set on training-fold gears only. For
   approaches with minute-level scores (HI, Isolation Forest, ridge) the threshold is the 95th percentile of the
   minute scores inside the healthy-baseline window. For run-level baselines (elapsed hours, debris) it is the
@@ -155,7 +159,8 @@ The independent unit is the gear. The design reports uncertainty as follows:
 
 ### 6.1 Ablation (`ablation.py`)
 
-Remove or alter one component at a time; report Δ T1 `mse_per_gear` and Δ T2 `mean_ex` relative to the full approach.
+Remove or alter one component at a time; report Δ T1 `mse_pooled` and Δ T2 `mean_ex` (`mse_pooled`) relative to the
+full approach.
 
 | Applies to | Ablations |
 |---|---|
@@ -234,8 +239,8 @@ Each selected example is written up with the assignment's a–d structure.
   sign-flip p with floor; label-noise-check rank; fit and score time; `n_tuned`.
 - Figures: `fig_per_gear_dots.png` (primary), `fig_trajectories.png` (top 3 approaches vs photo truth per gear),
   `fig_lead_time.png`.
-- Winner rule, fixed in advance: (1) most gears beating elapsed hours on T1; (2) lowest T1 `mse_per_gear`;
-  (3) fewest `n_tuned`.
+- Winner rule, fixed in advance: (1) most gears beating elapsed hours on T1 gear error; (2) lowest T1
+  `mse_pooled`; (3) fewest `n_tuned`.
 - Interpretation ties results to model assumptions: Mahalanobis assumes roughly Gaussian CIs (impulsive CIs are
   heavy-tailed); Isolation Forest uses axis-aligned splits; ridge assumes a linear, non-negative map; rig restarts
   violate the stationary-healthy-state assumption shared by every approach.
