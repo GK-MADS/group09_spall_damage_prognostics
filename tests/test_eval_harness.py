@@ -243,3 +243,63 @@ def test_winner_rule_excludes_in_sample_rows():
         index=["tuned_nonnested", "tuned_nested"],
     )
     assert rank_approaches(t) == ["tuned_nested"]
+
+
+def test_candidates_rank_by_absolute_residual_within_approach():
+    from models.eval.failures import candidates
+
+    # pooled map at score 1 averages truths (1, 0, 0, 0) -> 0.25, so Exp-X run 4 misses by 0.75, Exp-Y runs by 0.25
+    r = pd.concat([
+        _runs([0.0, 0.0, 0.0, 1.0], [0, 0, 0, 2], [False] * 3 + [True], gear="Exp-X"),
+        _runs([0.0, 1.0, 1.0, 1.0], [0, 0, 0, 0], [False] * 4, gear="Exp-Y"),
+    ]).assign(approach="m", kind="unsupervised")
+    c = candidates(r)
+    top = c[(c.approach == "m") & (c.target == "photo")].sort_values("rank").iloc[0]
+    assert (top.experiment, top.run_num, top["rank"]) == ("Exp-X", 4, 1) and np.isclose(top.residual, -0.75)
+
+
+def test_exact_attribution_sums_to_the_score():
+    from models.eval.failures import exact_attribution
+
+    ds = synth_dataset()
+    x = ds.z[FEATS].to_numpy()[-1]
+    for col in ["tooth", "maha", "tooth_maha"]:
+        a = A.HI(col).fit(ds.z, ds.ends, ds.lab)
+        att = exact_attribution(a, x[[a.features.index(f) for f in a.features]])
+        target = a.predict_rows(x[None])[0]
+        if col == "tooth":
+            assert np.isclose(att.sum(), target)
+        elif col == "maha":
+            assert np.isclose(att.sum(), target**2)  # shares of squared distance
+        else:
+            assert np.isclose(att.sum(), target**2) or target == 0.0
+
+
+def test_lime_contributions_match_shap_on_a_linear_model():
+    from models.eval.failures import lime_attribution, shap_attribution
+
+    ds = synth_dataset()
+    a = A.RidgeApproach(FEATS, sign_split=False, log=False, positive=False).fit(ds.z, ds.ends, ds.lab)
+    bg = ds.z[FEATS].to_numpy()
+    # mixed-sign deviations from the mean: a slope and a contribution then disagree in sign for some features
+    x = bg.mean(0) + np.random.default_rng(1).normal(0, 3, len(FEATS)) * bg.std(0)
+    lime, shap_ = lime_attribution(a, x, bg), shap_attribution(a, x)
+    assert np.corrcoef(lime.to_numpy(), shap_.reindex(lime.index).to_numpy())[0, 1] > 0.99
+
+
+def test_seed_residual_sd_is_zero_for_deterministic_and_positive_for_iforest():
+    from models.eval.failures import seed_residual_sd
+
+    ds = synth_dataset()
+    det = seed_residual_sd(ds, lambda seed: A.HI("tooth"), "Exp-A", 4, seeds=range(3))
+    rnd = seed_residual_sd(ds, lambda seed: A.IForest(seed=seed, n_estimators=10), "Exp-A", 4, seeds=range(3))
+    assert det == 0.0 and rnd > 0.0
+
+
+def test_agreement_uses_features_both_methods_cover():
+    from models.eval.failures import agreement
+
+    ref = pd.Series({"a": 3.0, "b": -1.0, "c": 2.0})
+    lime = pd.Series({"a": 0.3, "b": -0.2, "c": 0.4, "d": 9.0, "e": -9.0})
+    assert np.isclose(agreement(ref, lime), 0.5)
+    assert np.isnan(agreement(None, lime)) and np.isnan(agreement(ref[["a"]], lime))
