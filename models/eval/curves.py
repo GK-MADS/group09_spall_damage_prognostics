@@ -13,7 +13,21 @@ from spall_supervised import LABELLED
 from .adapters import HI, IForest, RidgeApproach
 from .harness import OUT, TRAIN, evaluate_runs, load_dataset, pooled_residuals, record, run_folds, save_fig
 
-APPROACHES = {"hi_tooth": lambda: HI("tooth"), "hi_maha": lambda: HI("maha"), "iforest": lambda: IForest()}
+APPROACHES = {
+    "hi_tooth": lambda: HI("tooth"),
+    "hi_tooth_maha": lambda: HI("tooth_maha"),
+    "hi_maha": lambda: HI("maha"),
+    "iforest": lambda: IForest(),
+}
+# hi_tooth = clip(T, 0).mean() fits nothing but its threshold, so its gear curve is flat by construction;
+# the quoted number comes from an approach that actually learns from the healthy gears.
+HEADLINE = "iforest"
+
+
+def gain_2_to_3(g: pd.DataFrame, approach: str) -> float:
+    """Drop in mean gear error from 2 to 3 training gears (positive = still improving)."""
+    m = g[g.approach == approach].groupby("k").err.mean()
+    return float(m[2] - m[3])
 
 
 def gear_curve(ds) -> pd.DataFrame:
@@ -101,8 +115,11 @@ def main(ds=None):
     save_fig(fig, "fig_learning_curves.png")
     plt.close(fig)
 
-    m = g[g.approach == "hi_tooth"].groupby("k").err.mean()
-    record(curve_gain_2_to_3_gears_hi_tooth=float(m[2] - m[3]))
+    record(
+        curve_headline=HEADLINE,
+        curve_gain_2_to_3_gears=gain_2_to_3(g, HEADLINE),
+        curve_gain_2_to_3_gears_hi_tooth_maha=gain_2_to_3(g, "hi_tooth_maha"),
+    )
 
 
 if __name__ == "__main__":

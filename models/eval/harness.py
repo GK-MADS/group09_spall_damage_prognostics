@@ -108,7 +108,8 @@ def run_folds(make: Callable, ds: Dataset) -> FoldResult:
         r = a.score(ds.z[ds.z.experiment == held], ds.ends[ds.ends.experiment == held])
         score_s += time.perf_counter() - t1
         fit_s += t1 - t0
-        parts.append(r[["experiment", "run_num", "end_h", "score"]].assign(threshold=a.threshold))
+        r = r.assign(causal=r["causal"] if "causal" in r else r.score)  # hours/debris are causal already
+        parts.append(r[["experiment", "run_num", "end_h", "score", "causal"]].assign(threshold=a.threshold))
         models[held] = a
     runs = pd.concat(parts, ignore_index=True).sort_values(["experiment", "run_num"], ignore_index=True)
     runs["photo"] = photo_damage(runs)
@@ -153,9 +154,16 @@ def bootstrap_range(values, n: int = 2000) -> tuple[float, float]:
     return float(lo), float(hi)
 
 
+def _alarm(runs: pd.DataFrame) -> pd.Series:
+    return runs["causal"] if "causal" in runs else runs.score
+
+
 def detection(runs: pd.DataFrame) -> dict:
-    """Spall run ends caught/missed; false alarms are flags on run ends with no photo damage at all."""
-    flag = runs.score > runs.threshold
+    """Spall run ends caught/missed; false alarms are flags on run ends with no photo damage at all.
+
+    Alarms use the causal series (no information from later runs) when present.
+    """
+    flag = _alarm(runs) > runs.threshold
     caught = int((flag & runs.spall).sum())
     missed = int((~flag & runs.spall).sum())
     false = int((flag & (runs.photo == 0)).sum())
@@ -169,7 +177,7 @@ def lead_times(runs: pd.DataFrame) -> pd.Series:
     for g, r in runs.groupby("experiment"):
         if not r.spall.any():
             continue
-        flagged = r.loc[r.score > r.threshold, "end_h"]
+        flagged = r.loc[_alarm(r) > r.threshold, "end_h"]
         out[g] = r.loc[r.spall, "end_h"].min() - flagged.min() if len(flagged) else np.nan
     return pd.Series(out, dtype=float)
 

@@ -50,7 +50,8 @@ CELLS = [
     (
         "code",
         'fig("fig_learning_curves.png")\n'
-        'print("hi_tooth error drop from 2 to 3 gears:", N["curve_gain_2_to_3_gears_hi_tooth"])',
+        'print(N["curve_headline"], "error drop from 2 to 3 gears:", N["curve_gain_2_to_3_gears"])\n'
+        'print("hi_tooth_maha:", N["curve_gain_2_to_3_gears_hi_tooth_maha"], "(hi_tooth fits no parameters: flat)")',
     ),
     ("md", "## 5. Step 2 — Comparison"),
     ("code", 'cmp = table("comparison.csv", index_col=0)\ncmp.round(4)'),

@@ -19,6 +19,7 @@ HYPOTHESES = [
         experiment="Exp-A",
         target="photo",
         category="systematic",
+        source="design",
         why="all-CI distance jumps when the rig restarts for run 3, driven by energy/global CIs, while the photo shows "
         "no damage",
     ),
@@ -27,6 +28,7 @@ HYPOTHESES = [
         experiment="Exp-F",
         target="photo",
         category="systematic",
+        source="revised after ranking",
         why="photo truth sums damage over teeth (6 spalled teeth on Exp-F's last inspection vs 2 on Exp-C) while the "
         "vibration index tracks the worst tooth, so the most-damaged gear is under-scored by every approach",
     ),
@@ -35,6 +37,7 @@ HYPOTHESES = [
         experiment="Exp-B",
         target="mean_ex",
         category="systematic",
+        source="design",
         why="trained on Exp-A's labels alone, 24 sign-split inputs fit Exp-A-specific CI shifts and under-estimate "
         "Exp-B's final wear (overfitting with one labelled gear)",
     ),
@@ -43,6 +46,7 @@ HYPOTHESES = [
         experiment="Exp-C",
         target="photo",
         category="edge case",
+        source="design",
         why="Exp-C runs twice as long as any other gear and damages only at run 12 (two spalled teeth, two camera "
         "setups), so its final score is over-mapped relative to its photo label",
     ),
@@ -51,15 +55,27 @@ HYPOTHESES = [
         experiment="Exp-A",
         target="mean_ex",
         category="edge case",
+        source="design",
         why="trained on Exp-B's gradual wear and tested on Exp-A's late spalls: a damage regime it never saw",
     ),
     dict(
         approach="iforest",
         experiment="Exp-B",
         target="photo",
+        category="systematic",
+        source="revised after ranking",
+        why="the Isolation Forest over-scores Exp-B's last run under every seed; only the size of the error depends "
+        "on the seed (systematic with seed-dependent magnitude)",
+    ),
+    dict(
+        approach="iforest",
+        experiment="Exp-C",
+        run_num=12,
+        target="photo",
         category="random",
-        why="the Isolation Forest over-scores Exp-B's last run, and the size of that error changes with the "
-        "random seed (see seed_residual_sd)",
+        source="revised after ranking",
+        why="the Isolation Forest's error on Exp-C's spall run changes sign with the random seed: its mean across "
+        "seeds is smaller than its spread, so no fix to the model's assumptions would remove it",
     ),
 ]
 
@@ -101,6 +117,8 @@ def select_examples(cands: pd.DataFrame, max_rank: int = 5) -> pd.DataFrame:
         c = cands[
             (cands.approach == h["approach"]) & (cands.experiment == h["experiment"]) & (cands.target == h["target"])
         ]
+        if "run_num" in h:  # pinned run end (random errors are not consistently the worst)
+            c = c[c.run_num == h["run_num"]]
         top = c.sort_values("rank").iloc[0]
         rows.append(
             {
@@ -186,15 +204,25 @@ def _tuned_z(a, ds):
     return condition_correct(ds.minutes, a.st["base_h"])
 
 
+def is_random(vals) -> bool:
+    """Random error: the residual's mean across seeds is smaller than its spread (its sign is not stable)."""
+    v = np.asarray(vals, float)
+    return bool(abs(v.mean()) < v.std())
+
+
 def seed_residual_sd(ds, make_seeded, gear: str, run_num: int, seeds=range(5), target: str = "photo") -> float:
     """SD across random seeds of one run end's pooled-map residual (0 for a deterministic approach)."""
+    return float(np.std(seed_residuals(ds, make_seeded, gear, run_num, seeds, target)))
+
+
+def seed_residuals(ds, make_seeded, gear: str, run_num: int, seeds=range(5), target: str = "photo") -> np.ndarray:
     vals = []
     for seed in seeds:
         r = run_folds(lambda seed=seed: make_seeded(seed), ds).runs
         r = r[r[target].notna()]
         res = pooled_residuals(r.score, r[target])
         vals.append(res[((r.experiment == gear) & (r.run_num == run_num)).to_numpy()][0])
-    return float(np.std(vals))
+    return np.array(vals)
 
 
 def explain(ex_row, ds, n):
@@ -250,13 +278,23 @@ def main(ds=None):
     ex = select_examples(cands)
     extra = [explain(row, ds, i + 1) for i, row in enumerate(ex.itertuples())]
     ex = pd.concat([ex, pd.DataFrame(extra)], axis=1)
-    ex["seed_residual_sd"] = [
-        seed_residual_sd(
-            ds, lambda seed: IForest(seed=seed), e.experiment, int(e.run_num), range(SEED, SEED + 5), e.target
-        )
+    seeds = [
+        seed_residuals(ds, lambda s: IForest(seed=s), e.experiment, int(e.run_num), range(SEED, SEED + 10), e.target)
         if e.approach == "iforest"
-        else 0.0
+        else np.array([e.residual])  # deterministic: every seed gives the same residual
         for e in ex.itertuples()
+    ]
+    ex["seed_mean"] = [v.mean() for v in seeds]
+    ex["seed_residual_sd"] = [v.std() for v in seeds]
+    ex["seed_sign_flips"] = [int(min((v > 0).sum(), (v < 0).sum())) for v in seeds]
+    ex["random_like"] = [is_random(v) for v in seeds]
+    # A random example must have an unstable sign and an error at least as large as the approach's 5th-largest;
+    # every other category must be stable in sign and rank in the approach's top 5.
+    fifth = cands.groupby(["approach", "target"]).residual.apply(lambda r: r.abs().nlargest(5).min())
+    big = [np.abs(v).max() >= fifth[(e.approach, e.target)] for v, e in zip(seeds, ex.itertuples())]
+    ex["confirmed"] = [
+        (rl and b) if c == "random" else (conf and not rl)
+        for rl, b, c, conf in zip(ex.random_like, big, ex.category, ex.confirmed)
     ]
     ex.round(5).to_csv(OUT / "failure_examples.csv", index=False)
     conf = ex[ex.confirmed]

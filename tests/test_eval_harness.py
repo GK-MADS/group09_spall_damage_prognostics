@@ -353,3 +353,38 @@ def test_run_all_writes_every_output():
     run_all.main()
     missing = [f for f in EXPECTED if not (H.OUT / f).exists()]
     assert not missing, missing
+
+
+def test_run_end_carries_a_causal_series_beside_the_smoothed_score():
+    from models.eval.adapters import _run_end
+
+    rows = [
+        dict(experiment="Exp-X", run_num=run, hours=run * 2 + k / 60, hi=level)
+        for run, level in [(1, 0.0), (2, 5.0), (3, 1.0), (4, 6.0)]
+        for k in range(60)
+    ]
+    ends = pd.DataFrame(dict(experiment="Exp-X", run_num=[1, 2, 3, 4], end_h=[3.0, 5.0, 7.0, 9.0]))
+    r = _run_end(pd.DataFrame(rows), ends, "hi", "iso", 60)
+    assert r.score.tolist() == [0.0, 3.0, 3.0, 6.0]  # iso pools run 2 with the later run 3
+    assert r.causal.tolist() == [0.0, 5.0, 5.0, 6.0]  # running max uses only runs up to each end
+
+
+def test_detection_and_lead_time_use_the_causal_series():
+    r = _runs([0.1, 0.1, 0.1, 0.9], [0, 0, 0, 2], [False] * 3 + [True]).assign(causal=[0.1, 0.9, 0.9, 0.9])
+    assert H.detection(r)["false_alarms"] == 2
+    assert H.lead_times(r)["Exp-X"] == 12.0
+
+
+def test_seed_spread_classifies_random_only_when_sign_is_unstable():
+    from models.eval.failures import is_random
+
+    assert is_random([0.2, -0.1, 0.15, -0.2])  # mean 0.0125 < sd
+    assert not is_random([0.33, 0.2, 0.45, 0.3])  # same sign every seed: systematic, seed-dependent size
+
+
+def test_learning_curve_headline_is_a_fitted_approach():
+    from models.eval import curves
+
+    assert curves.HEADLINE != "hi_tooth"  # clip(T,0).mean() has no fitted parameters, so its curve is flat
+    g = pd.DataFrame(dict(approach="m", k=[1, 2, 2, 3], held="h", combo="c", err=[0.3, 0.2, 0.4, 0.1]))
+    assert np.isclose(curves.gain_2_to_3(g, "m"), 0.2)

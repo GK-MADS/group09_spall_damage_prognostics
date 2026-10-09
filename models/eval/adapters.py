@@ -29,8 +29,11 @@ TUNED_CONFIG = Path(__file__).resolve().parents[1] / "out" / "labelled_config.js
 
 
 def _run_end(s: pd.DataFrame, ends: pd.DataFrame, col: str, monotone: str, tail: int) -> pd.DataFrame:
+    """score: smoothed as configured (for the offline challenge metric). causal: running max of the raw run-end
+    values, which uses only runs up to each end (for alarms and lead time)."""
     r = run_end_scores(s, ends, [col], monotone, tail)
-    return r[["experiment", "run_num", "end_h"]].assign(score=r[col].to_numpy())
+    c = run_end_scores(s, ends, [col], "cummax", tail)
+    return r[["experiment", "run_num", "end_h"]].assign(score=r[col].to_numpy(), causal=c[col].to_numpy())
 
 
 def _rows(X: np.ndarray, cols: list[str]) -> pd.DataFrame:

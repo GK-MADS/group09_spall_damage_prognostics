@@ -9,7 +9,7 @@ hi_spe,Exp-C,67.755
 hi_spe,Exp-F,24.348888888888887
 hi_zpos,Exp-A,0.0
 hi_zpos,Exp-B,27.042500000000004
-hi_zpos,Exp-C,0.0
+hi_zpos,Exp-C,67.755
 hi_zpos,Exp-F,24.348888888888887
 hi_zmax,Exp-A,12.026388888888889
 hi_zmax,Exp-B,27.042500000000004
@@ -17,11 +17,11 @@ hi_zmax,Exp-C,67.755
 hi_zmax,Exp-F,24.348888888888887
 hi_tooth,Exp-A,0.0
 hi_tooth,Exp-B,8.55416666666667
-hi_tooth,Exp-C,0.0
+hi_tooth,Exp-C,67.755
 hi_tooth,Exp-F,24.348888888888887
 hi_tooth_maha,Exp-A,0.0
 hi_tooth_maha,Exp-B,8.55416666666667
-hi_tooth_maha,Exp-C,0.0
+hi_tooth_maha,Exp-C,61.59888888888888
 hi_tooth_maha,Exp-F,24.348888888888887
 iforest,Exp-A,12.026388888888889
 iforest,Exp-B,27.042500000000004
@@ -29,7 +29,7 @@ iforest,Exp-C,67.755
 iforest,Exp-F,24.348888888888887
 ridge_tooth,Exp-A,0.0
 ridge_tooth,Exp-B,8.55416666666667
-ridge_tooth,Exp-C,0.0
+ridge_tooth,Exp-C,67.755
 ridge_tooth,Exp-F,24.348888888888887
 ridge_all,Exp-A,12.026388888888889
 ridge_all,Exp-B,20.87805555555556

@@ -94,7 +94,7 @@ def main(ds=None) -> pd.DataFrame:
 
     _fig_dots(gears, order + ["hours", "debris"])
     _fig_trajectories(runs, order[:3])
-    _fig_lead(pd.DataFrame(lead_rows), order + ["hours", "debris"])
+    _fig_lead(pd.DataFrame(lead_rows), order + ["hours", "debris"], table.false_alarms)
     w = table.loc[order[0]]
     record(
         winner=order[0],
@@ -145,7 +145,9 @@ def _fig_trajectories(runs, top):
     plt.close(fig)
 
 
-def _fig_lead(lead, order):
+def _fig_lead(lead, order, false_alarms):
+    """With photo truth, an early warning and a false alarm on a healthy-looking gear are the same event,
+    so each approach's lead times are labelled with its false-alarm count."""
     p = lead.pivot(index="approach", columns="experiment", values="lead_h").reindex(order)
     fig, ax = plt.subplots(figsize=(10, 3.5))
     p.plot.bar(ax=ax, width=0.8)
@@ -157,7 +159,12 @@ def _fig_lead(lead, order):
         ax.scatter(x[np.isnan(v)], np.zeros(np.isnan(v).sum()), marker="x", s=24, color=f"C{j}", zorder=3)
     ax.axhline(0, color="k", lw=0.8)
     ax.set_ylabel("lead time (h, + = early)")
-    ax.set_title("Hours between first alarm and first spall photo (dot = alarm at the spall inspection, x = never)")
+    ax.legend(title="held-out gear", bbox_to_anchor=(1.01, 1), loc="upper left", fontsize=8)
+    ax.set_xticks(range(len(p)), [f"{a}\n({int(false_alarms[a])} FA)" for a in p.index], rotation=90)
+    ax.set_title(
+        "Hours from first (causal) alarm to first spall photo; FA = false alarms on undamaged run ends\n"
+        "dot = alarm at the spall inspection, x = never flagged"
+    )
     save_fig(fig, "fig_lead_time.png")
     plt.close(fig)
 
