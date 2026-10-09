@@ -1,0 +1,13 @@
+train_gear,test_gear,k,t2_mse,spearman
+Exp-A,Exp-B,1,0.115944,
+Exp-A,Exp-B,2,0.115944,
+Exp-A,Exp-B,3,0.095899,0.612372
+Exp-A,Exp-B,4,0.095899,0.612372
+Exp-A,Exp-B,5,0.003725,0.954314
+Exp-B,Exp-A,1,0.147902,
+Exp-B,Exp-A,2,0.104033,0.888523
+Exp-B,Exp-A,3,0.104033,0.888523
+Exp-B,Exp-A,4,0.104033,0.888523
+Exp-B,Exp-A,5,0.005718,0.973329
+Exp-B,Exp-A,6,0.005718,0.973329
+Exp-B,Exp-A,7,0.005718,0.973329
