@@ -1,4 +1,7 @@
-"""Evaluation and failure analysis for the spall models (see docs/superpowers/specs/2026-10-09-model-evaluation-design.md)."""
+"""Evaluation and failure analysis for the spall models.
+
+Design: docs/superpowers/specs/2026-10-09-model-evaluation-design.md
+"""
 
 import sys
 from pathlib import Path

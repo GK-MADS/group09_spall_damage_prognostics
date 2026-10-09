@@ -1,9 +1,16 @@
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 import pytest
 
 import models.eval  # noqa: F401  (puts models/ on sys.path)
+from models.eval import adapters as A
+from models.eval import harness as H
+
+# isort: split
 from spall_hi import BASE_H, BREAK_IN_H, COND, FEATS, TOOTH, HealthyModel, condition_correct
+from spall_supervised import RidgeDamage
 
 GEARS = ["Exp-A", "Exp-B", "Exp-C", "Exp-F"]
 
@@ -28,9 +35,7 @@ def synth_minutes(gears=GEARS, runs=4, per_run=120, seed=0, drop=()):
 
 
 def synth_ends(gears=GEARS, runs=4):
-    return pd.DataFrame(
-        [dict(experiment=g, run_num=r, end_h=r * 6.0) for g in gears for r in range(1, runs + 1)]
-    )
+    return pd.DataFrame([dict(experiment=g, run_num=r, end_h=r * 6.0) for g in gears for r in range(1, runs + 1)])
 
 
 def synth_labels(runs=4):
@@ -86,11 +91,6 @@ def test_healthy_model_feats_default_and_subset():
     pd.testing.assert_frame_equal(a, b)
     c = HealthyModel(TOOTH, TOOTH).fit(z).score(z)
     assert c.maha.notna().all() and not np.allclose(c.maha, a.maha)
-
-
-from pathlib import Path
-
-from models.eval import harness as H
 
 
 class Spy:
@@ -149,8 +149,16 @@ def test_bootstrap_range_is_seeded_and_ordered():
 def _runs(scores, photo, spall, threshold=0.5, gear="Exp-X"):
     n = len(scores)
     return pd.DataFrame(
-        dict(experiment=gear, run_num=range(1, n + 1), end_h=np.arange(1, n + 1) * 6.0, score=scores,
-             threshold=threshold, photo=photo, spall=spall, mean_ex=np.nan)
+        dict(
+            experiment=gear,
+            run_num=range(1, n + 1),
+            end_h=np.arange(1, n + 1) * 6.0,
+            score=scores,
+            threshold=threshold,
+            photo=photo,
+            spall=spall,
+            mean_ex=np.nan,
+        )
     )
 
 
@@ -183,10 +191,6 @@ def test_gear_error_uses_pooled_map_so_hours_is_not_perfect():
 def test_load_dataset_missing_parquet_names_the_recreate_command(tmp_path):
     with pytest.raises(FileNotFoundError, match="scripts/flatten_hdf5.py"):
         H.load_dataset(tmp_path)
-
-
-from models.eval import adapters as A
-from spall_supervised import RidgeDamage
 
 
 def test_every_adapter_returns_one_row_per_run_end_even_without_minutes():
@@ -227,8 +231,12 @@ def test_winner_rule_order():
     from models.eval.compare import rank_approaches
 
     t = pd.DataFrame(
-        dict(kind=["unsupervised", "supervised", "baseline", "semi-supervised"], k_beats_hours=[3, 3, 4, 2],
-             t1_mse_pooled=[0.02, 0.01, 0.0, 0.001], n_tuned=[0, 1, 0, 96]),
+        dict(
+            kind=["unsupervised", "supervised", "baseline", "semi-supervised"],
+            k_beats_hours=[3, 3, 4, 2],
+            t1_mse_pooled=[0.02, 0.01, 0.0, 0.001],
+            n_tuned=[0, 1, 0, 96],
+        ),
         index=["a", "b", "hours", "c"],
     )
     assert rank_approaches(t) == ["b", "a", "c"]
@@ -238,8 +246,13 @@ def test_winner_rule_excludes_in_sample_rows():
     from models.eval.compare import rank_approaches
 
     t = pd.DataFrame(
-        dict(kind=["semi-supervised", "semi-supervised"], k_beats_hours=[4, 4], t1_mse_pooled=[0.01, 0.02],
-             n_tuned=[96, 96], in_sample=[True, False]),
+        dict(
+            kind=["semi-supervised", "semi-supervised"],
+            k_beats_hours=[4, 4],
+            t1_mse_pooled=[0.01, 0.02],
+            n_tuned=[96, 96],
+            in_sample=[True, False],
+        ),
         index=["tuned_nonnested", "tuned_nested"],
     )
     assert rank_approaches(t) == ["tuned_nested"]
@@ -249,10 +262,12 @@ def test_candidates_rank_by_absolute_residual_within_approach():
     from models.eval.failures import candidates
 
     # pooled map at score 1 averages truths (1, 0, 0, 0) -> 0.25, so Exp-X run 4 misses by 0.75, Exp-Y runs by 0.25
-    r = pd.concat([
-        _runs([0.0, 0.0, 0.0, 1.0], [0, 0, 0, 2], [False] * 3 + [True], gear="Exp-X"),
-        _runs([0.0, 1.0, 1.0, 1.0], [0, 0, 0, 0], [False] * 4, gear="Exp-Y"),
-    ]).assign(approach="m", kind="unsupervised")
+    r = pd.concat(
+        [
+            _runs([0.0, 0.0, 0.0, 1.0], [0, 0, 0, 2], [False] * 3 + [True], gear="Exp-X"),
+            _runs([0.0, 1.0, 1.0, 1.0], [0, 0, 0, 0], [False] * 4, gear="Exp-Y"),
+        ]
+    ).assign(approach="m", kind="unsupervised")
     c = candidates(r)
     top = c[(c.approach == "m") & (c.target == "photo")].sort_values("rank").iloc[0]
     assert (top.experiment, top.run_num, top["rank"]) == ("Exp-X", 4, 1) and np.isclose(top.residual, -0.75)
@@ -303,3 +318,38 @@ def test_agreement_uses_features_both_methods_cover():
     lime = pd.Series({"a": 0.3, "b": -0.2, "c": 0.4, "d": 9.0, "e": -9.0})
     assert np.isclose(agreement(ref, lime), 0.5)
     assert np.isnan(agreement(None, lime)) and np.isnan(agreement(ref[["a"]], lime))
+
+
+EXPECTED = [
+    "comparison.csv",
+    "gear_errors.csv",
+    "lead_time.csv",
+    "runs.csv",
+    "ablation.csv",
+    "sensitivity.csv",
+    "sensitivity_tuned_winners.csv",
+    "curves_gears.csv",
+    "curves_baseline_hours.csv",
+    "curves_ridge.csv",
+    "failure_candidates.csv",
+    "failure_examples.csv",
+    "report_numbers.json",
+    "fig_per_gear_dots.png",
+    "fig_trajectories.png",
+    "fig_lead_time.png",
+    "fig_ablation_heatmap.png",
+    "fig_sensitivity.png",
+    "fig_learning_curves.png",
+    "fig_failure_1.png",
+]
+
+
+@pytest.mark.slow
+def test_run_all_writes_every_output():
+    if not Path("data/train/lf_1s.parquet").exists():
+        pytest.skip("parquet tables not downloaded")
+    from models.eval import run_all
+
+    run_all.main()
+    missing = [f for f in EXPECTED if not (H.OUT / f).exists()]
+    assert not missing, missing

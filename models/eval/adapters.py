@@ -11,7 +11,16 @@ import numpy as np
 import pandas as pd
 from sklearn.ensemble import IsolationForest
 from sklearn.linear_model import Ridge
-from spall_hi import FEATS, TAIL_MIN, TOOTH, HealthyModel, challenge_score, condition_correct, photo_damage, run_end_scores
+from spall_hi import (
+    FEATS,
+    TAIL_MIN,
+    TOOTH,
+    HealthyModel,
+    challenge_score,
+    condition_correct,
+    photo_damage,
+    run_end_scores,
+)
 from spall_supervised import AGGS, GRID, LABELLED, minute_targets
 
 from .harness import SEED, Dataset
@@ -74,13 +83,13 @@ class RidgeApproach:
 
     kind, n_tuned = "supervised", 1
 
-    def __init__(self, feats=TOOTH, alpha=10.0, target="mean_ex", sign_split=True, log=True, positive=True, tail=TAIL_MIN):
+    def __init__(
+        self, feats=TOOTH, alpha=10.0, target="mean_ex", sign_split=True, log=True, positive=True, tail=TAIL_MIN
+    ):
         self.features, self.alpha, self.target = list(feats), alpha, target
         self.sign_split, self.log, self.positive, self.tail = sign_split, log, positive, tail
         self.name = "ridge_tooth" if feats == TOOTH else "ridge_all"
-        self.design_names = (
-            [f"{c}+" for c in feats] + [f"{c}-" for c in feats] if sign_split else list(feats)
-        )
+        self.design_names = [f"{c}+" for c in feats] + [f"{c}-" for c in feats] if sign_split else list(feats)
 
     def design(self, Z):
         X = np.c_[np.clip(Z, 0, None), np.clip(-Z, 0, None)] if self.sign_split else np.asarray(Z, float)
@@ -122,8 +131,13 @@ class LabelTuned:
 
     @staticmethod
     def _setting(d):
-        return dict(tooth=["ci_" + c for c in d["tooth"].split("/")], form=d["form"], base_h=float(d["base_h"]),
-                    tail=int(d["tail"]), monotone=d["monotone"])
+        return dict(
+            tooth=["ci_" + c for c in d["tooth"].split("/")],
+            form=d["form"],
+            base_h=float(d["base_h"]),
+            tail=int(d["tail"]),
+            monotone=d["monotone"],
+        )
 
     def _select(self, gears, ends, lab):
         rows = []
@@ -139,11 +153,22 @@ class LabelTuned:
                             r = run_end_scores(s, ends, [form], mono, tail)
                             ab = r.merge(lab, on=["experiment", "run_num"])
                             cf = r[~r.experiment.isin(LABELLED)]
-                            rows.append(dict(
-                                tooth="/".join(c[3:] for c in tooth), form=form, base_h=base_h, tail=tail, monotone=mono,
-                                AB=np.mean([challenge_score(ab[form], ab[k], ab.experiment.to_numpy())["mse_pooled"] for k in AGGS]),
-                                CF=challenge_score(cf[form], photo_damage(cf))["mse_pooled"],
-                            ))
+                            rows.append(
+                                dict(
+                                    tooth="/".join(c[3:] for c in tooth),
+                                    form=form,
+                                    base_h=base_h,
+                                    tail=tail,
+                                    monotone=mono,
+                                    AB=np.mean(
+                                        [
+                                            challenge_score(ab[form], ab[k], ab.experiment.to_numpy())["mse_pooled"]
+                                            for k in AGGS
+                                        ]
+                                    ),
+                                    CF=challenge_score(cf[form], photo_damage(cf))["mse_pooled"],
+                                )
+                            )
         t = pd.DataFrame(rows)
         t["rank"] = t.AB.rank() + t.CF.rank()
         return t.sort_values(["rank", "AB"], kind="stable").iloc[0].to_dict()
@@ -159,7 +184,7 @@ class LabelTuned:
         return self
 
     def predict_rows(self, X):
-        # tooth-only rows: HealthyModel.score needs FEATS columns, so pad the others with 0 (they do not enter tooth forms)
+        # HealthyModel.score needs every FEATS column; pad the non-tooth ones with 0 (tooth forms ignore them)
         df = _rows(np.zeros((len(X), len(FEATS))), FEATS)
         df[self.features] = np.asarray(X, float)
         return self.hm.score(df)[self.st["form"]].to_numpy()
@@ -174,7 +199,9 @@ class Hours:
     kind, n_tuned, name = "baseline", 0, "hours"
 
     def fit(self, z, ends, lab):
-        self.threshold = float(ends.loc[ends.run_num == ends.groupby("experiment").run_num.transform("min"), "end_h"].max())
+        self.threshold = float(
+            ends.loc[ends.run_num == ends.groupby("experiment").run_num.transform("min"), "end_h"].max()
+        )
         return self
 
     def score(self, z, ends):

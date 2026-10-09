@@ -7,30 +7,60 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from scipy.stats import spearmanr
-from spall_hi import TAIL_MIN, TOOTH
+from spall_hi import TAIL_MIN
 
 from .adapters import HI, IForest, LabelTuned, RidgeApproach, registry
 from .harness import OUT, SEED, folds, load_dataset, pooled_residuals, record, run_folds, save_fig
 
 # Hypotheses from the design, each tied to a category; select_examples confirms or rejects them against the data.
 HYPOTHESES = [
-    dict(approach="hi_maha", experiment="Exp-A", target="photo", category="systematic",
-         why="all-CI distance jumps when the rig restarts for run 3, driven by energy/global CIs, while the photo shows "
-             "no damage"),
-    dict(approach="hi_tooth_maha", experiment="Exp-F", target="photo", category="systematic",
-         why="photo truth sums damage over teeth (6 spalled teeth on Exp-F's last inspection vs 2 on Exp-C) while the "
-             "vibration index tracks the worst tooth, so the most-damaged gear is under-scored by every approach"),
-    dict(approach="ridge_all", experiment="Exp-B", target="mean_ex", category="systematic",
-         why="trained on Exp-A's labels alone, 24 sign-split inputs fit Exp-A-specific CI shifts and under-estimate "
-             "Exp-B's final wear (overfitting with one labelled gear)"),
-    dict(approach="tuned_nested", experiment="Exp-C", target="photo", category="edge case",
-         why="Exp-C runs twice as long as any other gear and damages only at run 12 (two spalled teeth, two camera "
-             "setups), so its final score is over-mapped relative to its photo label"),
-    dict(approach="ridge_tooth", experiment="Exp-A", target="mean_ex", category="edge case",
-         why="trained on Exp-B's gradual wear and tested on Exp-A's late spalls: a damage regime it never saw"),
-    dict(approach="iforest", experiment="Exp-B", target="photo", category="random",
-         why="the Isolation Forest over-scores Exp-B's last run, and the size of that error changes with the random seed "
-             "(see seed_residual_sd)"),
+    dict(
+        approach="hi_maha",
+        experiment="Exp-A",
+        target="photo",
+        category="systematic",
+        why="all-CI distance jumps when the rig restarts for run 3, driven by energy/global CIs, while the photo shows "
+        "no damage",
+    ),
+    dict(
+        approach="hi_tooth_maha",
+        experiment="Exp-F",
+        target="photo",
+        category="systematic",
+        why="photo truth sums damage over teeth (6 spalled teeth on Exp-F's last inspection vs 2 on Exp-C) while the "
+        "vibration index tracks the worst tooth, so the most-damaged gear is under-scored by every approach",
+    ),
+    dict(
+        approach="ridge_all",
+        experiment="Exp-B",
+        target="mean_ex",
+        category="systematic",
+        why="trained on Exp-A's labels alone, 24 sign-split inputs fit Exp-A-specific CI shifts and under-estimate "
+        "Exp-B's final wear (overfitting with one labelled gear)",
+    ),
+    dict(
+        approach="tuned_nested",
+        experiment="Exp-C",
+        target="photo",
+        category="edge case",
+        why="Exp-C runs twice as long as any other gear and damages only at run 12 (two spalled teeth, two camera "
+        "setups), so its final score is over-mapped relative to its photo label",
+    ),
+    dict(
+        approach="ridge_tooth",
+        experiment="Exp-A",
+        target="mean_ex",
+        category="edge case",
+        why="trained on Exp-B's gradual wear and tested on Exp-A's late spalls: a damage regime it never saw",
+    ),
+    dict(
+        approach="iforest",
+        experiment="Exp-B",
+        target="photo",
+        category="random",
+        why="the Isolation Forest over-scores Exp-B's last run, and the size of that error changes with the "
+        "random seed (see seed_residual_sd)",
+    ),
 ]
 
 
@@ -45,17 +75,40 @@ def candidates(runs: pd.DataFrame) -> pd.DataFrame:
             x = x.assign(target=target, truth=x[target] / max(x[target].max(), 1e-9), residual=res)
             x["fitted"] = x.truth + x.residual
             x["rank"] = x.residual.abs().rank(ascending=False, method="first").astype(int)
-            out.append(x[["approach", "kind", "target", "experiment", "run_num", "end_h", "score", "truth", "fitted", "residual", "rank"]])
+            out.append(
+                x[
+                    [
+                        "approach",
+                        "kind",
+                        "target",
+                        "experiment",
+                        "run_num",
+                        "end_h",
+                        "score",
+                        "truth",
+                        "fitted",
+                        "residual",
+                        "rank",
+                    ]
+                ]
+            )
     return pd.concat(out, ignore_index=True)
 
 
 def select_examples(cands: pd.DataFrame, max_rank: int = 5) -> pd.DataFrame:
     rows = []
     for h in HYPOTHESES:
-        c = cands[(cands.approach == h["approach"]) & (cands.experiment == h["experiment"]) & (cands.target == h["target"])]
+        c = cands[
+            (cands.approach == h["approach"]) & (cands.experiment == h["experiment"]) & (cands.target == h["target"])
+        ]
         top = c.sort_values("rank").iloc[0]
-        rows.append({**h, **top[["run_num", "end_h", "score", "truth", "fitted", "residual", "rank"]].to_dict(),
-                     "confirmed": bool(top["rank"] <= max_rank)})
+        rows.append(
+            {
+                **h,
+                **top[["run_num", "end_h", "score", "truth", "fitted", "residual", "rank"]].to_dict(),
+                "confirmed": bool(top["rank"] <= max_rank),
+            }
+        )
     return pd.DataFrame(rows)
 
 
@@ -97,8 +150,14 @@ def lime_attribution(a, x: np.ndarray, background: np.ndarray) -> pd.Series:
         from lime.lime_tabular import LimeTabularExplainer
     except ImportError as e:
         raise ImportError("failures.py needs lime: uv pip install --python .venv/bin/python lime") from e
-    ex = LimeTabularExplainer(background, feature_names=a.features, mode="regression", discretize_continuous=False,
-                              sample_around_instance=True, random_state=SEED)
+    ex = LimeTabularExplainer(
+        background,
+        feature_names=a.features,
+        mode="regression",
+        discretize_continuous=False,
+        sample_around_instance=True,
+        random_state=SEED,
+    )
     e = ex.explain_instance(x, a.predict_rows, num_features=len(a.features), num_samples=2000)
     # LIME weights are slopes per standardised unit; contribution = slope x the instance's standardised deviation,
     # which is the quantity SHAP and the exact decompositions report
@@ -141,8 +200,11 @@ def seed_residual_sd(ds, make_seeded, gear: str, run_num: int, seeds=range(5), t
 def explain(ex_row, ds, n):
     reg = registry(ds)
     train, held = next((t, h) for t, h in folds() if h == ex_row.experiment)
-    a = reg[ex_row.approach]().fit(ds.z[ds.z.experiment.isin(train)], ds.ends[ds.ends.experiment.isin(train)],
-                                   ds.lab[ds.lab.experiment.isin(train)])
+    a = reg[ex_row.approach]().fit(
+        ds.z[ds.z.experiment.isin(train)],
+        ds.ends[ds.ends.experiment.isin(train)],
+        ds.lab[ds.lab.experiment.isin(train)],
+    )
     x, z = _instance(a, ds, held, int(ex_row.run_num))
     if np.isnan(x).any():
         return dict(explained=False, note="no minutes in this run (carried forward from the previous run)")
@@ -189,15 +251,35 @@ def main(ds=None):
     extra = [explain(row, ds, i + 1) for i, row in enumerate(ex.itertuples())]
     ex = pd.concat([ex, pd.DataFrame(extra)], axis=1)
     ex["seed_residual_sd"] = [
-        seed_residual_sd(ds, lambda seed: IForest(seed=seed), e.experiment, int(e.run_num), range(SEED, SEED + 5), e.target)
-        if e.approach == "iforest" else 0.0
+        seed_residual_sd(
+            ds, lambda seed: IForest(seed=seed), e.experiment, int(e.run_num), range(SEED, SEED + 5), e.target
+        )
+        if e.approach == "iforest"
+        else 0.0
         for e in ex.itertuples()
     ]
     ex.round(5).to_csv(OUT / "failure_examples.csv", index=False)
     conf = ex[ex.confirmed]
-    record(n_failure_examples=int(len(conf)), n_failure_categories=int(conf.category.nunique()),
-           lime_agreement_median=float(ex.get("lime_agreement", pd.Series(dtype=float)).median()))
-    print(ex[["approach", "experiment", "run_num", "category", "rank", "confirmed", "top_exact_or_shap", "top_lime", "lime_agreement"]].to_string())
+    record(
+        n_failure_examples=int(len(conf)),
+        n_failure_categories=int(conf.category.nunique()),
+        lime_agreement_median=float(ex.get("lime_agreement", pd.Series(dtype=float)).median()),
+    )
+    print(
+        ex[
+            [
+                "approach",
+                "experiment",
+                "run_num",
+                "category",
+                "rank",
+                "confirmed",
+                "top_exact_or_shap",
+                "top_lime",
+                "lime_agreement",
+            ]
+        ].to_string()
+    )
     return ex
 
 

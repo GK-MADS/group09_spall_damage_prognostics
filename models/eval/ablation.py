@@ -18,14 +18,25 @@ def _drop(cols, c):
 
 def cases(ds, ds_nocorr, ds_pooled, ds_unsteady, ds_debris):
     """(approach, ablation, factory, dataset) for every ablation in the spec."""
-    full = {"hi_tooth": lambda **k: HI("tooth", **k), "hi_maha": lambda **k: HI("maha", **k), "iforest": lambda **k: IForest(**k)}
+    full = {
+        "hi_tooth": lambda **k: HI("tooth", **k),
+        "hi_maha": lambda **k: HI("maha", **k),
+        "iforest": lambda **k: IForest(**k),
+    }
     out = []
     for name, mk in full.items():
         feat_kw = "tooth" if name == "hi_tooth" else "feats"
         base_cols = TOOTH if name == "hi_tooth" else FEATS
         out.append((name, "full", lambda mk=mk: mk(), ds))
         alt_cols = FEATS if name == "hi_tooth" else TOOTH
-        out.append((name, "all CIs" if name == "hi_tooth" else "tooth CIs only", lambda mk=mk, kw=feat_kw, c=alt_cols: mk(**{kw: c}), ds))
+        out.append(
+            (
+                name,
+                "all CIs" if name == "hi_tooth" else "tooth CIs only",
+                lambda mk=mk, kw=feat_kw, c=alt_cols: mk(**{kw: c}),
+                ds,
+            )
+        )
         for c in TOOTH:
             out.append((name, f"drop {c[3:]}", lambda mk=mk, kw=feat_kw, c=_drop(base_cols, c): mk(**{kw: c}), ds))
         out.append((name, "+ debris", lambda mk=mk, kw=feat_kw, c=base_cols + ["debris_z"]: mk(**{kw: c}), ds_debris))
@@ -52,8 +63,14 @@ def main(ds=None) -> pd.DataFrame:
     rows = []
     for name, abl, make, d in cases(ds, **variants):
         fr = run_folds(make, d)
-        rows.append(dict(approach=name, ablation=abl, t1_mse_pooled=evaluate_runs(fr.runs, "photo")[0]["mse_pooled"],
-                         t2_mse_pooled=evaluate_runs(fr.runs, "mean_ex")[0]["mse_pooled"]))
+        rows.append(
+            dict(
+                approach=name,
+                ablation=abl,
+                t1_mse_pooled=evaluate_runs(fr.runs, "photo")[0]["mse_pooled"],
+                t2_mse_pooled=evaluate_runs(fr.runs, "mean_ex")[0]["mse_pooled"],
+            )
+        )
         print(rows[-1])
     t = pd.DataFrame(rows)
     full = t[t.ablation == "full"].set_index("approach")
@@ -77,8 +94,10 @@ def main(ds=None) -> pd.DataFrame:
 
     nf = t[t.ablation != "full"]
     best, worst = nf.loc[nf.d_t1.idxmin()], nf.loc[nf.d_t1.idxmax()]
-    record(ablation_largest_t1_gain=f"{best.approach}: {best.ablation} ({best.d_t1:+.4f})",
-           ablation_largest_t1_loss=f"{worst.approach}: {worst.ablation} ({worst.d_t1:+.4f})")
+    record(
+        ablation_largest_t1_gain=f"{best.approach}: {best.ablation} ({best.d_t1:+.4f})",
+        ablation_largest_t1_loss=f"{worst.approach}: {worst.ablation} ({worst.d_t1:+.4f})",
+    )
     return t
 
 

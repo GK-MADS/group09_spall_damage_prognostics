@@ -68,7 +68,9 @@ def load_dataset(
 def with_debris_feature(ds: Dataset) -> Dataset:
     """Add debris_z: log of each run's large-particle rate over the gear's first-run rate (0 in run 1)."""
     d = ds.debris.sort_values(["experiment", "run_num"]).copy()
-    d["debris_z"] = np.log(d.debris_rate.clip(lower=1e-3) / d.groupby("experiment").debris_rate.transform("first").clip(lower=1e-3))
+    d["debris_z"] = np.log(
+        d.debris_rate.clip(lower=1e-3) / d.groupby("experiment").debris_rate.transform("first").clip(lower=1e-3)
+    )
     z = ds.z.merge(d[["experiment", "run_num", "debris_z"]], on=["experiment", "run_num"], how="left")
     z.index = ds.z.index
     return replace(ds, z=z.assign(debris_z=z.debris_z.fillna(0.0)))

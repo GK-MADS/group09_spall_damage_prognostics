@@ -24,8 +24,19 @@ def _tick(v) -> str:
 def _rows(approach, param, value, fr, coef_norm=np.nan):
     s1, g1 = evaluate_runs(fr.runs, "photo")
     s2, _ = evaluate_runs(fr.runs, "mean_ex")
-    return [dict(approach=approach, param=param, value=value, gear=g, gear_err=e, t1_mse_pooled=s1["mse_pooled"],
-                 t2_mse_pooled=s2["mse_pooled"], coef_norm=coef_norm) for g, e in g1.items()]
+    return [
+        dict(
+            approach=approach,
+            param=param,
+            value=value,
+            gear=g,
+            gear_err=e,
+            t1_mse_pooled=s1["mse_pooled"],
+            t2_mse_pooled=s2["mse_pooled"],
+            coef_norm=coef_norm,
+        )
+        for g, e in g1.items()
+    ]
 
 
 def main(ds=None) -> pd.DataFrame:
@@ -44,7 +55,9 @@ def main(ds=None) -> pd.DataFrame:
             fr = run_folds(lambda a=a, f=feats: RidgeApproach(f, alpha=a), ds)
             norm = float(np.mean([np.linalg.norm(m.m.coef_) for m in fr.models.values()]))
             rows += _rows(nm, "alpha", float(a), fr, norm)
-    for k, vals in dict(n_estimators=[50, 100, 200, 500], max_samples=[64, 256, 1024, "auto"], max_features=[0.25, 0.5, 1.0]).items():
+    for k, vals in dict(
+        n_estimators=[50, 100, 200, 500], max_samples=[64, 256, 1024, "auto"], max_features=[0.25, 0.5, 1.0]
+    ).items():
         for v in vals:
             rows += _rows("iforest", k, str(v), run_folds(lambda k=k, v=v: IForest(**{k: v}), ds))
     for s in range(5):
@@ -53,12 +66,24 @@ def main(ds=None) -> pd.DataFrame:
     t.round(6).to_csv(OUT / "sensitivity.csv", index=False)
 
     fr = run_folds(lambda: LabelTuned(ds.minutes, nested=True), ds)
-    win = pd.DataFrame([dict(held_out=g, **{k: m.selected[k] for k in ["tooth", "form", "base_h", "tail", "monotone"]})
-                        for g, m in fr.models.items()])
+    win = pd.DataFrame(
+        [
+            dict(held_out=g, **{k: m.selected[k] for k in ["tooth", "form", "base_h", "tail", "monotone"]})
+            for g, m in fr.models.items()
+        ]
+    )
     win.to_csv(OUT / "sensitivity_tuned_winners.csv", index=False)
 
-    panels = [("hi_tooth", "base_h"), ("hi_tooth", "tail"), ("hi_tooth", "break_in_h"), ("ridge_tooth", "alpha"),
-              ("ridge_all", "alpha"), ("iforest", "n_estimators"), ("iforest", "max_samples"), ("iforest", "max_features")]
+    panels = [
+        ("hi_tooth", "base_h"),
+        ("hi_tooth", "tail"),
+        ("hi_tooth", "break_in_h"),
+        ("ridge_tooth", "alpha"),
+        ("ridge_all", "alpha"),
+        ("iforest", "n_estimators"),
+        ("iforest", "max_samples"),
+        ("iforest", "max_features"),
+    ]
     fig, axes = plt.subplots(2, 4, figsize=(15, 6), sharey=True)
     for ax, (ap, pa) in zip(axes.flat, panels):
         d = t[(t.approach == ap) & (t.param == pa)]
@@ -77,8 +102,11 @@ def main(ds=None) -> pd.DataFrame:
     ra = t[(t.approach == "ridge_tooth") & (t.param == "alpha")].drop_duplicates("value")
     flat = ra[np.isclose(ra.t1_mse_pooled, ra.t1_mse_pooled.iloc[0])].value
     seeds = t[(t.approach == "iforest") & (t.param == "seed")].drop_duplicates("value").t1_mse_pooled
-    record(ridge_alpha_flat_range=f"{flat.min():g} to {flat.max():g}", iforest_seed_sd_t1=float(seeds.std()),
-           tuned_distinct_winners=int(win[["tooth", "form", "base_h", "tail", "monotone"]].drop_duplicates().shape[0]))
+    record(
+        ridge_alpha_flat_range=f"{flat.min():g} to {flat.max():g}",
+        iforest_seed_sd_t1=float(seeds.std()),
+        tuned_distinct_winners=int(win[["tooth", "form", "base_h", "tail", "monotone"]].drop_duplicates().shape[0]),
+    )
     return t
 
 

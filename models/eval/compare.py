@@ -52,15 +52,30 @@ def main(ds=None) -> pd.DataFrame:
         diffs = (hours_err - g1).reindex(g1.index)
         lo, hi = bootstrap_range(g1.to_numpy())
         lt = lead_times(fr.runs)
-        rows.append(dict(
-            approach=name, kind=a.kind, n_tuned=a.n_tuned, in_sample=getattr(a, "in_sample", False),
-            t1_mse_pooled=s1["mse_pooled"], t1_mse_per_gear=s1["mse_per_gear"], t1_spearman=s1["spearman"],
-            t1_gear_err_mean=g1.mean(), t1_gear_err_lo=lo, t1_gear_err_hi=hi,
-            t2_mse_pooled=s2["mse_pooled"], t2_spearman=s2["spearman"],
-            **detection(fr.runs), lead_time_median_h=lt.median(),
-            k_beats_hours=int((diffs > 0).sum()), p_vs_hours=sign_flip_p(diffs), p_floor=p_floor(len(diffs)),
-            t1_mse_checked_only=label_noise_mse(fr.runs), fit_s=fr.fit_s, score_s=fr.score_s,
-        ))
+        rows.append(
+            dict(
+                approach=name,
+                kind=a.kind,
+                n_tuned=a.n_tuned,
+                in_sample=getattr(a, "in_sample", False),
+                t1_mse_pooled=s1["mse_pooled"],
+                t1_mse_per_gear=s1["mse_per_gear"],
+                t1_spearman=s1["spearman"],
+                t1_gear_err_mean=g1.mean(),
+                t1_gear_err_lo=lo,
+                t1_gear_err_hi=hi,
+                t2_mse_pooled=s2["mse_pooled"],
+                t2_spearman=s2["spearman"],
+                **detection(fr.runs),
+                lead_time_median_h=lt.median(),
+                k_beats_hours=int((diffs > 0).sum()),
+                p_vs_hours=sign_flip_p(diffs),
+                p_floor=p_floor(len(diffs)),
+                t1_mse_checked_only=label_noise_mse(fr.runs),
+                fit_s=fr.fit_s,
+                score_s=fr.score_s,
+            )
+        )
         gear_rows += [dict(approach=name, experiment=g, gear_err=v) for g, v in g1.items()]
         lead_rows += [dict(approach=name, experiment=g, lead_h=v) for g, v in lt.items()]
         run_rows.append(fr.runs.assign(approach=name, kind=a.kind))
@@ -82,9 +97,15 @@ def main(ds=None) -> pd.DataFrame:
     _fig_lead(pd.DataFrame(lead_rows), order + ["hours", "debris"])
     w = table.loc[order[0]]
     record(
-        winner=order[0], winner_k_of_4=int(w.k_beats_hours), winner_mse_pooled_t1=float(w.t1_mse_pooled),
-        winner_p_vs_hours=float(w.p_vs_hours), p_floor_4=p_floor(4), p_floor_2=p_floor(2),
-        selection_bias_gap_t1=float(table.loc["tuned_nested", "t1_mse_pooled"] - table.loc["tuned_nonnested", "t1_mse_pooled"]),
+        winner=order[0],
+        winner_k_of_4=int(w.k_beats_hours),
+        winner_mse_pooled_t1=float(w.t1_mse_pooled),
+        winner_p_vs_hours=float(w.p_vs_hours),
+        p_floor_4=p_floor(4),
+        p_floor_2=p_floor(2),
+        selection_bias_gap_t1=float(
+            table.loc["tuned_nested", "t1_mse_pooled"] - table.loc["tuned_nonnested", "t1_mse_pooled"]
+        ),
         ranking_changes_on_checked_only=bool((table.rank_checked_only != table.rank_all).any()),
     )
     print(table.round(4).to_string())

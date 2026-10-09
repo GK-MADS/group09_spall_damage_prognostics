@@ -51,3 +51,15 @@ PYTHONPATH=models .venv/bin/python models/spall_supervised.py
 1. A non-negative ridge fit on the labels (compared A↔B leave-one-gear-out; written as the alternate `labelled_ridge_*` files).
 2. Label-driven tuning of the unsupervised HI across 96 settings, scored on the A/B labels and the Exp-C/F photo proxy.
    The winner (FM4 upward departure, last 60 min of each run, running max) is the primary `labelled_*_submission.csv`.
+
+## Evaluation and failure analysis
+
+`models/eval/` evaluates every approach (health-index candidates, Isolation Forest, ridge, label-tuned HI nested and
+not, elapsed hours, debris) with one leave-one-gear-out protocol and writes all figures, tables and quoted numbers
+for the report to `models/eval/out/`. Design: `docs/superpowers/specs/2026-10-09-model-evaluation-design.md`.
+
+```bash
+.venv/bin/python -m models.eval.run_all          # regenerate models/eval/out/ (about 30 s)
+.venv/bin/python -m models.eval.build_notebook   # rebuild models/eval/spall_eval.ipynb
+.venv/bin/python -m pytest tests -m "not slow"   # fast tests
+```

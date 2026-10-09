@@ -25,14 +25,19 @@ def gear_curve(ds) -> pd.DataFrame:
             others = [g for g in TRAIN if g != held]
             for k in (1, 2, 3):
                 for combo in itertools.combinations(others, k):
-                    a = make().fit(ds.z[ds.z.experiment.isin(combo)], ds.ends[ds.ends.experiment.isin(combo)], ds.lab.iloc[:0])
+                    a = make().fit(
+                        ds.z[ds.z.experiment.isin(combo)], ds.ends[ds.ends.experiment.isin(combo)], ds.lab.iloc[:0]
+                    )
                     r = a.score(ds.z[ds.z.experiment == held], ds.ends[ds.ends.experiment == held])
                     preds.append(r.assign(k=k, held=held, combo="+".join(c[-1] for c in combo)))
         p = pd.concat(preds, ignore_index=True)
         p["photo"] = photo_damage(p)
         for k, pk in p.groupby("k"):
             pk = pk.assign(sq=pooled_residuals(pk.score, pk.photo) ** 2)
-            rows += [dict(approach=name, k=k, held=h, combo=c, err=e) for (h, c), e in pk.groupby(["held", "combo"]).sq.mean().items()]
+            rows += [
+                dict(approach=name, k=k, held=h, combo=c, err=e)
+                for (h, c), e in pk.groupby(["held", "combo"]).sq.mean().items()
+            ]
     return pd.DataFrame(rows)
 
 
@@ -41,7 +46,11 @@ def baseline_hours_curve(ds) -> pd.DataFrame:
     for base_h in [1.0, 2.0, 3.0, 4.5, 6.0]:
         d = load_dataset(minutes=ds.minutes, base_h=base_h)
         for name, make in APPROACHES.items():
-            rows.append(dict(approach=name, base_h=base_h, t1_mse_pooled=evaluate_runs(run_folds(make, d).runs)[0]["mse_pooled"]))
+            rows.append(
+                dict(
+                    approach=name, base_h=base_h, t1_mse_pooled=evaluate_runs(run_folds(make, d).runs)[0]["mse_pooled"]
+                )
+            )
     return pd.DataFrame(rows)
 
 
@@ -73,8 +82,12 @@ def main(ds=None):
     fig, axes = plt.subplots(1, 3, figsize=(14, 3.6))
     for name, d in g.groupby("approach"):
         m = d.groupby("k").err.agg(["mean", "min", "max"])
-        axes[0].errorbar(m.index, m["mean"], yerr=[m["mean"] - m["min"], m["max"] - m["mean"]], marker="o", capsize=3, label=name)
-    axes[0].set(xlabel="training gears for the healthy model", ylabel="gear error (T1)", xticks=[1, 2, 3], title="Gears")
+        axes[0].errorbar(
+            m.index, m["mean"], yerr=[m["mean"] - m["min"], m["max"] - m["mean"]], marker="o", capsize=3, label=name
+        )
+    axes[0].set(
+        xlabel="training gears for the healthy model", ylabel="gear error (T1)", xticks=[1, 2, 3], title="Gears"
+    )
     for name, d in b.groupby("approach"):
         axes[1].plot(d.base_h, d.t1_mse_pooled, marker="o", label=name)
     axes[1].set(xlabel="healthy-baseline hours", ylabel="T1 pooled MSE", title="Healthy hours")
