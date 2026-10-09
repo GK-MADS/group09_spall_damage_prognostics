@@ -28,7 +28,7 @@ export PHM_TEST_SHARE_PASSWORD=<password from the challenge>   # only needed for
 `models/spall_hi.py` builds a health index (HI) without damage labels and writes challenge submissions to `models/out/`.
 
 ```bash
-uv pip install --python .venv/bin/python scikit-learn scipy pytest
+uv pip install --python .venv/bin/python scikit-learn scipy pytest shap lime matplotlib nbformat
 .venv/bin/python models/spall_hi.py          # LOGO evaluation + models/out/{validation,test}_submission.csv
 .venv/bin/python -m pytest tests -q
 ```

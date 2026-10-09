@@ -19,3 +19,6 @@ data/*/photos/
 *.parquet
 *.hdf5
 *.part
+
+# Plan-execution scratch (superpowers)
+.superpowers/
