@@ -94,14 +94,16 @@ EYE.update(
 
 
 # ---------------------------------------------------------------- data
-def load_minutes(data: Path, split: str) -> pd.DataFrame:
+def load_minutes(data: Path, split: str, steady: bool = True) -> pd.DataFrame:
     lf = pd.read_parquet(data / split / "lf_1s.parquet")
     ci = [c for c in lf if c.startswith(("ci_", "ctx_"))]
     # Exp-A Run-2 is a byte copy of Run-1 at the source: keep the hour axis, drop the values
     lf.loc[(lf.experiment == "Exp-A") & (lf.run_num == 2), ci] = np.nan
-    nom_t = lf.groupby("experiment").ctx_pau_torque.transform("median")
-    steady = (lf.ctx_pau_speed.sub(1400).abs() < 20) & (lf.ctx_pau_torque.sub(nom_t).abs() < 0.05 * nom_t)
-    lf = lf[steady].assign(minute=(lf.test_hours * 60).astype(int))
+    if steady:
+        nom_t = lf.groupby("experiment").ctx_pau_torque.transform("median")
+        keep = (lf.ctx_pau_speed.sub(1400).abs() < 20) & (lf.ctx_pau_torque.sub(nom_t).abs() < 0.05 * nom_t)
+        lf = lf[keep]
+    lf = lf.assign(minute=(lf.test_hours * 60).astype(int))
     m = lf.groupby(["experiment", "run_num", "minute"])[FEATS + COND].median().reset_index()
     m["hours"] = (m.minute + 0.5) / 60
     return m.dropna(subset=FEATS + COND)
@@ -125,25 +127,45 @@ def run_ends(data: Path, split: str) -> pd.DataFrame:
 
 
 # ---------------------------------------------------------------- features
-def condition_correct(m: pd.DataFrame, base_h: float = BASE_H) -> pd.DataFrame:
+def condition_correct(
+    m: pd.DataFrame,
+    base_h: float = BASE_H,
+    break_in_h: float = BREAK_IN_H,
+    correct: bool = True,
+    per_gear: bool = True,
+) -> pd.DataFrame:
     """log|CI| with temperature/torque regressed out and scaled on each gear's own healthy window.
 
     Gears run at different loads (Exp-A at 120 ft-lbf, the rest at 100) and every gear has its own
     healthy vibration signature, so each gear is referenced to itself; the pooled models then only
-    see departures from that gear's normal.
+    see departures from that gear's normal. correct=False skips the regression and per_gear=False
+    uses one reference pooled over all gears in `m` (both for ablation only).
     """
-    out = []
-    for _, g in m.groupby("experiment"):
+
+    def prep(g):
         X = np.log(g[FEATS].abs().to_numpy() + 1e-9)
-        base = ((g.hours > BREAK_IN_H) & (g.hours < base_h)).to_numpy()
-        C = g[COND].to_numpy()
-        C = (C - C[base].mean(0)) / (C[base].std(0) + 1e-9)
-        T = np.c_[np.ones(len(g)), C]
-        beta = np.linalg.lstsq(T[base], X[base], rcond=None)[0]
+        base = ((g.hours > break_in_h) & (g.hours < base_h)).to_numpy()
+        return X, g[COND].to_numpy(), base
+
+    def reference(X, C, base):
+        mu, sd = C[base].mean(0), C[base].std(0) + 1e-9
+        T = np.c_[np.ones(len(C)), (C - mu) / sd]
+        beta = np.linalg.lstsq(T[base], X[base], rcond=None)[0] if correct else np.zeros((T.shape[1], X.shape[1]))
         R = X - T @ beta
         med = np.median(R[base], 0)
         mad = np.median(np.abs(R[base] - med), 0) * 1.4826
-        Z = (R - med) / np.where(mad > 0, mad, 1)
+        return mu, sd, beta, med, np.where(mad > 0, mad, 1)
+
+    def apply(X, C, ref):
+        mu, sd, beta, med, mad = ref
+        T = np.c_[np.ones(len(C)), (C - mu) / sd]
+        return (X - T @ beta - med) / mad
+
+    pooled = None if per_gear else reference(*prep(m))
+    out = []
+    for _, g in m.groupby("experiment"):
+        X, C, base = prep(g)
+        Z = apply(X, C, pooled if pooled is not None else reference(X, C, base))
         z = pd.DataFrame(Z, columns=FEATS, index=g.index)
         z[["experiment", "run_num", "hours"]] = g[["experiment", "run_num", "hours"]]
         z["base"] = base
@@ -154,11 +176,11 @@ def condition_correct(m: pd.DataFrame, base_h: float = BASE_H) -> pd.DataFrame:
 class HealthyModel:
     """Healthy-state models fit on pooled baseline minutes of the training gears only."""
 
-    def __init__(self, tooth: list[str] = TOOTH):
-        self.tooth = tooth
+    def __init__(self, tooth: list[str] = TOOTH, feats: list[str] = FEATS):
+        self.tooth, self.feats = tooth, feats
 
     def fit(self, z: pd.DataFrame):
-        B = z.loc[z.base, FEATS].to_numpy()
+        B = z.loc[z.base, self.feats].to_numpy()
         self.lw = LedoitWolf().fit(B)
         self.lw_t = LedoitWolf().fit(z.loc[z.base, self.tooth].to_numpy())
         self.pca = PCA(n_components=0.95, svd_solver="full").fit(B)
@@ -167,10 +189,10 @@ class HealthyModel:
         return self
 
     def score(self, z: pd.DataFrame) -> pd.DataFrame:
-        X = z[FEATS].to_numpy()
+        X = z[self.feats].to_numpy()
         R = X - self.pca.inverse_transform(self.pca.transform(X))
         s = z[["experiment", "run_num", "hours"]].copy()
-        s["maha"] = np.sqrt(self.lw.mahalanobis(X) / len(FEATS))
+        s["maha"] = np.sqrt(self.lw.mahalanobis(X) / len(self.feats))
         s["spe"] = np.sqrt((R**2).sum(1) / self.spe_scale)
         # directional: damage raises impulsiveness/energy CIs, so only upward departures count
         s["zpos"] = np.sqrt((np.clip(X, 0, None) ** 2).mean(1))
