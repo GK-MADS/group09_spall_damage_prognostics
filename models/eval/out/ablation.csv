@@ -1,0 +1,41 @@
+approach,ablation,t1_mse_pooled,t2_mse_pooled,d_t1,d_t2
+hi_tooth,full,0.01309,0.00846,0.0,0.0
+hi_tooth,all CIs,0.01273,0.00579,-0.00036,-0.00267
+hi_tooth,drop fm4,0.01309,0.00846,0.0,0.0
+hi_tooth,drop m6a,0.01309,0.00846,0.0,0.0
+hi_tooth,drop m8a,0.01309,0.00586,0.0,-0.0026
+hi_tooth,drop na4,0.0133,0.00846,0.00021,0.0
+hi_tooth,+ debris,0.01309,0.00846,0.0,0.0
+hi_tooth,no condition correction,0.01251,0.00846,-0.00058,0.0
+hi_tooth,pooled standardisation,0.02492,0.00846,0.01183,0.0
+hi_tooth,no steady filter,0.01309,0.00846,0.0,0.0
+hi_tooth,monotone none,0.01431,0.00846,0.00122,0.0
+hi_tooth,monotone cummax,0.01327,0.00846,0.00017,0.0
+hi_maha,full,0.02292,0.06717,0.0,0.0
+hi_maha,tooth CIs only,0.01225,0.0228,-0.01068,-0.04437
+hi_maha,drop fm4,0.02292,0.06717,0.0,0.0
+hi_maha,drop m6a,0.02292,0.06717,0.0,0.0
+hi_maha,drop m8a,0.02292,0.06717,0.0,0.0
+hi_maha,drop na4,0.02292,0.06717,-1e-05,0.0
+hi_maha,+ debris,0.02149,0.06717,-0.00143,0.0
+hi_maha,no condition correction,0.0218,0.06681,-0.00112,-0.00036
+hi_maha,pooled standardisation,0.02464,0.06206,0.00172,-0.00511
+hi_maha,no steady filter,0.02292,0.06717,0.0,0.0
+hi_maha,monotone none,0.0238,0.06717,0.00087,0.0
+hi_maha,monotone cummax,0.02292,0.06648,0.0,-0.00069
+iforest,full,0.01233,0.02314,0.0,0.0
+iforest,tooth CIs only,0.00901,0.04176,-0.00332,0.01861
+iforest,drop fm4,0.02069,0.02171,0.00836,-0.00143
+iforest,drop m6a,0.02423,0.02171,0.01191,-0.00143
+iforest,drop m8a,0.02423,0.0231,0.01191,-4e-05
+iforest,drop na4,0.02246,0.0231,0.01013,-4e-05
+iforest,+ debris,0.01429,0.04176,0.00197,0.01861
+iforest,no condition correction,0.02305,0.06119,0.01073,0.03804
+iforest,pooled standardisation,0.01897,0.06567,0.00665,0.04252
+iforest,no steady filter,0.01233,0.02314,0.0,0.0
+iforest,monotone none,0.01553,0.02314,0.0032,0.0
+iforest,monotone cummax,0.01198,0.02314,-0.00035,0.0
+ridge_tooth,full,0.0132,0.00488,0.0,0.0
+ridge_tooth,no sign split,0.01512,0.00846,0.00191,0.00358
+ridge_tooth,no log compression,0.01329,0.0231,9e-05,0.01822
+ridge_tooth,unconstrained sign,0.01476,0.00811,0.00156,0.00323
