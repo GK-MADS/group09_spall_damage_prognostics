@@ -183,3 +183,41 @@ def test_gear_error_uses_pooled_map_so_hours_is_not_perfect():
 def test_load_dataset_missing_parquet_names_the_recreate_command(tmp_path):
     with pytest.raises(FileNotFoundError, match="scripts/flatten_hdf5.py"):
         H.load_dataset(tmp_path)
+
+
+from models.eval import adapters as A
+from spall_supervised import RidgeDamage
+
+
+def test_every_adapter_returns_one_row_per_run_end_even_without_minutes():
+    ds = synth_dataset(drop={("Exp-A", 2)})  # mimic the nulled Exp-A Run-2
+    reg = A.registry(ds)
+    for name, make in reg.items():
+        if name.startswith("tuned"):
+            continue  # needs real-scale data; covered by the slow test
+        fr = H.run_folds(make, ds)
+        a2 = fr.runs[(fr.runs.experiment == "Exp-A")]
+        assert len(fr.runs) == 16 and fr.runs.score.notna().all(), name
+        assert a2.set_index("run_num").score[2] >= a2.set_index("run_num").score[1] - 1e-12, name
+
+
+def test_iforest_is_deterministic_for_a_fixed_seed():
+    ds = synth_dataset()
+    a = H.run_folds(lambda: A.IForest(), ds).runs.score
+    b = H.run_folds(lambda: A.IForest(), ds).runs.score
+    assert np.array_equal(a, b)
+
+
+def test_ridge_fits_with_one_labelled_gear_and_refuses_none():
+    ds = synth_dataset()
+    z, e, lab = ds.z, ds.ends, ds.lab
+    one = A.RidgeApproach().fit(z[z.experiment != "Exp-A"], e[e.experiment != "Exp-A"], lab[lab.experiment != "Exp-A"])
+    assert np.isfinite(one.threshold)
+    with pytest.raises(ValueError, match="no labelled gear"):
+        A.RidgeApproach().fit(z[z.experiment.isin(["Exp-C", "Exp-F"])], e, lab.iloc[:0])
+
+
+def test_ridge_default_design_matches_existing_model():
+    z = synth_dataset().z
+    r = A.RidgeApproach(TOOTH)
+    assert np.allclose(r.design(z[TOOTH].to_numpy()), RidgeDamage(TOOTH).design(z))
