@@ -1,10 +1,13 @@
 {
  "ablation_largest_t1_gain": "hi_maha: tooth CIs only (-0.0107)",
  "ablation_largest_t1_loss": "iforest: drop m6a (+0.0119)",
+ "iforest_seed_sd_t1": 0.00454,
  "p_floor_2": 0.25,
  "p_floor_4": 0.0625,
  "ranking_changes_on_checked_only": true,
+ "ridge_alpha_flat_range": "0.001 to 12.1153",
  "selection_bias_gap_t1": 0.00266,
+ "tuned_distinct_winners": 3,
  "winner": "hi_tooth_maha",
  "winner_k_of_4": 4,
  "winner_mse_pooled_t1": 0.01251,
