@@ -35,9 +35,14 @@ uv pip install --python .venv/bin/python scikit-learn scipy pytest shap lime mat
 
 Each gear is referenced to its own healthy first hours (0.5–6 h) after regressing out temperature and torque.
 Healthy-state models are fit on pooled training baselines only; the submitted HI is the upward departure of the
-tooth-damage CIs (FM4, M6A, M8A, NA4), taken as the median of each run's last hour and made non-decreasing per
-gear with isotonic regression. The by-eye photo labels are used only to compare candidates under an approximation
-of the challenge metric (MSE after the best monotone rescaling).
+tooth-damage CIs (FM4, M6A, M8A, NA4), taken as the 90th percentile of each run's last hour and made non-decreasing
+per gear with isotonic regression.
+
+The submitted HI is pinned to `tooth_maha` (`--select fixed`, the default). `--select label_free` instead picks the
+candidate with the best label-free fitness (monotonicity, trendability, prognosability and run-1 false-alarm rate,
+written to `models/out/label_free_eval.csv`). The by-eye photo labels are used only to report how candidates score
+under an approximation of the challenge metric (MSE after the best monotone rescaling); `--select photo` picks by
+that score and so uses labels for model selection.
 
 ### Using the Exp-A / Exp-B spall labels
 

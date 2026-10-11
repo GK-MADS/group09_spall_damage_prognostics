@@ -242,6 +242,22 @@ def test_winner_rule_order():
     assert rank_approaches(t) == ["b", "a", "c"]
 
 
+def test_winner_rule_breaks_near_ties_on_fewest_tuned_settings():
+    from models.eval.compare import rank_approaches
+
+    t = pd.DataFrame(
+        dict(
+            kind=["supervised", "unsupervised", "semi-supervised", "unsupervised"],
+            k_beats_hours=[4, 4, 4, 4],
+            t1_mse_pooled=[0.012500, 0.012504, 0.012499, 0.02],
+            n_tuned=[1, 0, 96, 0],
+        ),
+        index=["ridge", "hi", "tuned", "far"],
+    )
+    assert rank_approaches(t) == ["hi", "ridge", "tuned", "far"]
+    assert rank_approaches(t, tol=0.0)[0] == "tuned"
+
+
 def test_winner_rule_excludes_in_sample_rows():
     from models.eval.compare import rank_approaches
 
@@ -345,13 +361,16 @@ EXPECTED = [
 
 
 @pytest.mark.slow
-def test_run_all_writes_every_output():
+def test_run_all_writes_every_output(tmp_path, monkeypatch):
     if not Path("data/train/lf_1s.parquet").exists():
         pytest.skip("parquet tables not downloaded")
-    from models.eval import run_all
+    from models.eval import ablation, compare, curves, failures, run_all, sensitivity
 
+    # every step binds OUT at import; point them all at tmp_path so the tracked models/eval/out stays untouched
+    for m in (H, ablation, compare, curves, failures, run_all, sensitivity):
+        monkeypatch.setattr(m, "OUT", tmp_path)
     run_all.main()
-    missing = [f for f in EXPECTED if not (H.OUT / f).exists()]
+    missing = [f for f in EXPECTED if not (tmp_path / f).exists()]
     assert not missing, missing
 
 

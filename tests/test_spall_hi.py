@@ -61,3 +61,28 @@ def test_minute_targets_interpolate_between_inspections():
     ends = pd.DataFrame(dict(experiment="Exp-X", run_num=[1, 2], end_h=[6.0, 12.0]))
     lab = pd.DataFrame(dict(experiment="Exp-X", run_num=[1, 2], mean_ex=[0.0, 0.4]))
     assert np.allclose(minute_targets(z, ends, lab, "mean_ex"), [0.0, 0.0, 0.2, 0.4])
+
+
+def _gears(levels: dict[str, list[float]]) -> pd.DataFrame:
+    """Per-minute HI rows: one constant level per run, 60 minutes each."""
+    rows = []
+    for gear, lv in levels.items():
+        for run, v in enumerate(lv, start=1):
+            rows += [dict(experiment=gear, run_num=run, hours=run * 6 - 1 + k / 60, hi=v) for k in range(60)]
+    return pd.DataFrame(rows)
+
+
+def test_label_free_scores_rank_a_clean_degradation_above_a_noisy_one():
+    from spall_hi import label_free_table
+
+    clean = _gears({"Exp-A": [0, 0, 1, 5], "Exp-B": [0, 1, 2, 5], "Exp-C": [0, 0, 2, 5]})
+    noisy = _gears({"Exp-A": [3, 0, 4, 1], "Exp-B": [0, 4, 0, 9], "Exp-C": [2, 0, 3, 0]})
+    s = clean.rename(columns={"hi": "clean"}).assign(noisy=noisy.hi.to_numpy())
+    ends = s.groupby(["experiment", "run_num"]).hours.max().rename("end_h").reset_index()
+    thr = pd.DataFrame({"clean": 0.5, "noisy": 0.5}, index=["Exp-A", "Exp-B", "Exp-C"])
+    t = label_free_table(s, thr, ends, ["clean", "noisy"])
+    assert t.loc["clean", "monotonicity"] == 1.0  # never falls in any gear
+    assert t.loc["clean", "prognosability"] == 1.0  # every gear ends at 5
+    assert t.loc["clean", "false_alarm"] == 0.0 and np.isclose(t.loc["noisy", "false_alarm"], 2 / 3, atol=1e-4)
+    assert t.loc["clean", "trendability"] > t.loc["noisy", "trendability"]
+    assert t.fitness.idxmax() == "clean"

@@ -24,14 +24,26 @@ from .harness import (
 )
 
 
-def rank_approaches(table: pd.DataFrame) -> list[str]:
+T1_TIE_TOL = 1e-3  # T1 errors this close count as equal; below it the order is float noise, not evidence
+
+
+def rank_approaches(table: pd.DataFrame, tol: float = T1_TIE_TOL) -> list[str]:
     """Winner rule fixed in the spec: most gears beating hours, then lowest T1 mse_pooled, then fewest tuned settings.
 
+    T1 errors within `tol` of the best remaining one (same k_beats_hours) are a tie, broken by fewest tuned settings.
     In-sample rows (settings chosen on the evaluation labels) are reported but cannot win.
     """
     in_sample = table["in_sample"].astype(bool) if "in_sample" in table else pd.Series(False, index=table.index)
-    t = table[(table.kind != "baseline") & ~in_sample]
-    return t.sort_values(["k_beats_hours", "t1_mse_pooled", "n_tuned"], ascending=[False, True, True]).index.tolist()
+    rest = table[(table.kind != "baseline") & ~in_sample].sort_values(
+        ["k_beats_hours", "t1_mse_pooled", "n_tuned"], ascending=[False, True, True], kind="stable"
+    )
+    order = []
+    while len(rest):
+        top = rest.iloc[0]
+        tied = rest[(rest.k_beats_hours == top.k_beats_hours) & (rest.t1_mse_pooled <= top.t1_mse_pooled + tol)]
+        order += tied.sort_values(["n_tuned", "t1_mse_pooled"], kind="stable").index.tolist()
+        rest = rest.drop(tied.index)
+    return order
 
 
 def label_noise_mse(runs: pd.DataFrame) -> float:

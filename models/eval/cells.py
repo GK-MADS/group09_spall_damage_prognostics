@@ -53,7 +53,13 @@ CELLS = [
         'print(N["curve_headline"], "error drop from 2 to 3 gears:", N["curve_gain_2_to_3_gears"])\n'
         'print("hi_tooth_maha:", N["curve_gain_2_to_3_gears_hi_tooth_maha"], "(hi_tooth fits no parameters: flat)")',
     ),
-    ("md", "## 5. Step 2 — Comparison"),
+    (
+        "md",
+        "## 5. Step 2 — Comparison\n\n"
+        "Winner rule: most gears beating elapsed hours, then lowest T1 `mse_pooled`, then fewest tuned settings. "
+        "T1 errors within 0.001 of the best count as a tie (smaller gaps are float noise on 4 gears), so a tie goes "
+        "to the approach with fewer tuned settings. In-sample rows cannot win.",
+    ),
     ("code", 'cmp = table("comparison.csv", index_col=0)\ncmp.round(4)'),
     (
         "code",

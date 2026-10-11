@@ -1,5 +1,5 @@
 held_out,tooth,form,base_h,tail,monotone
-Exp-A,fm4,tooth,3.0,60,cummax
-Exp-B,fm4/na4,tooth_maha,6.0,60,cummax
-Exp-C,fm4,tooth,3.0,60,cummax
-Exp-F,fm4/m6a/m8a,tooth_maha,3.0,30,iso
+Exp-A,fm4/na4,tooth,3.0,120,cummax
+Exp-B,fm4/na4,tooth_maha,6.0,30,cummax
+Exp-C,fm4/na4,tooth_maha,6.0,120,cummax
+Exp-F,fm4/m6a/m8a/na4,tooth_maha,6.0,120,iso

@@ -1,5 +1,6 @@
 {
  "hi": "tooth_maha",
+ "select": "fixed",
  "monotone": "iso",
  "feats": [
   "ci_fm4",
@@ -25,5 +26,6 @@
   0.5,
   6.0
  ],
- "tail_min": 60
+ "tail_min": 60,
+ "tail_q": 0.9
 }

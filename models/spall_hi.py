@@ -2,8 +2,9 @@
 
 No damage labels are used to fit anything. Every model is fit on *healthy* data only
 (the first hours of each training gear), and damage is scored as distance from that
-healthy state. The photo labels in eda/scripts/compute.py (EYE) are used only to
-compare candidate HIs with the challenge's scoring rule.
+healthy state. The submitted HI is fixed in advance (tooth_maha) or chosen with label-free
+criteria (label_free_table); the photo labels in eda/scripts/compute.py (EYE) are used only
+to report how candidates score under the challenge's rule, unless --select photo is passed.
 
 Pipeline
   1. 1-s rows -> steady-state filter -> 1-min medians            (load_minutes)
@@ -19,6 +20,7 @@ that follow every rig restart; the tooth HIs stay flat on healthy runs and rise 
 Usage
   python models/spall_hi.py                 # evaluate candidates, write submissions to models/out/
   python models/spall_hi.py --data /path    # folder holding <split>/lf_1s.parquet + particles.parquet
+  python models/spall_hi.py --select label_free   # submit the HI with the best label-free fitness
 """
 
 import argparse
@@ -55,8 +57,11 @@ TOOTH = ["ci_fm4", "ci_m6a", "ci_m8a", "ci_na4"]
 COND = ["ctx_temperature", "ctx_pau_torque"]
 BREAK_IN_H = 0.5  # skip the first half hour of every gear (run-in transients)
 BASE_H = 6.0  # healthy window = [BREAK_IN_H, BASE_H]: inside run 1 of every gear
-TAIL_MIN = 60  # run-end value = median HI over the last TAIL_MIN steady minutes of the run
-DEBRIS_BINS = [f"dm4500_bin_{i}" for i in range(2, 8)]  # larger ferrous particles
+TAIL_MIN = 60  # run-end value = TAIL_Q quantile of HI over the last TAIL_MIN steady minutes of the run
+TAIL_Q = 0.9  # upper quantile: post-spall spikes are short, a median over a longer tail misses them
+ALARM_Q = 0.99  # label-free false-alarm threshold: this quantile of the HI on the fit gears' baseline minutes
+HI_DEFAULT = "tooth_maha"  # submitted HI, fixed in advance; see --select for the alternatives
+DEBRIS_BINS =[f"dm4500_bin_{i}" for i in range(2, 8)]  # larger ferrous particles
 
 # Photo-based damage per (gear, inspection-after-run) from the by-eye labels in eda/scripts/compute.py:
 # initiation = 1, spall = 2, summed over teeth. Evaluation only; never used for fitting.
@@ -209,9 +214,14 @@ def _iso(v: pd.Series) -> pd.Series:
 
 
 def run_end_scores(
-    s: pd.DataFrame, ends: pd.DataFrame, cols: list[str], monotone: str = "iso", tail: int = TAIL_MIN
+    s: pd.DataFrame,
+    ends: pd.DataFrame,
+    cols: list[str],
+    monotone: str = "iso",
+    tail: int = TAIL_MIN,
+    q: float = TAIL_Q,
 ) -> pd.DataFrame:
-    """One value per run end: median of the last `tail` minutes, carried forward, then made monotone.
+    """One value per run end: q-quantile of the last `tail` minutes, carried forward, then made monotone.
 
     Spalls do not heal, so the reported damage never goes down. "iso" fits a non-decreasing step
     function per gear (a one-run spike is averaged with its neighbours); "cummax" locks spikes in.
@@ -222,7 +232,7 @@ def run_end_scores(
         .groupby(["experiment", "run_num"])
         .tail(tail)
         .groupby(["experiment", "run_num"])[cols]
-        .median()
+        .quantile(q)
         .reset_index()
     )
     r = ends.merge(tail, on=["experiment", "run_num"], how="left").sort_values(["experiment", "run_num"])
@@ -260,13 +270,69 @@ def challenge_score(pred, truth, groups=None) -> dict:
     return out
 
 
-def evaluate(z_tr, ends_tr, debris_tr, cols, monotone="iso") -> pd.DataFrame:
-    """Leave-one-gear-out: healthy models are refit without the held-out gear, which is then scored."""
-    parts = []
+def logo_scores(z_tr: pd.DataFrame, alarm_q: float = ALARM_Q) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Leave-one-gear-out per-minute HIs: healthy models are refit without the held-out gear, which is then scored.
+
+    Also returns each fold's alarm threshold per HI (index = held-out gear): the alarm_q quantile of the HI on the
+    fit gears' own baseline minutes.
+    """
+    parts, thr = [], {}
     for held in SPLITS["train"]:
-        hm = HealthyModel().fit(z_tr[z_tr.experiment != held])
+        fit = z_tr[z_tr.experiment != held]
+        hm = HealthyModel().fit(fit)
         parts.append(hm.score(z_tr[z_tr.experiment == held]))
-    s = pd.concat(parts)
+        thr[held] = hm.score(fit[fit.base]).drop(columns=["experiment", "run_num", "hours"]).quantile(alarm_q)
+    return pd.concat(parts), pd.DataFrame(thr).T
+
+
+def label_free_table(s: pd.DataFrame, thr: pd.DataFrame, ends: pd.DataFrame, cols: list[str]) -> pd.DataFrame:
+    """Score candidate HIs without damage labels (PHM health-index criteria, after Coble & Hines).
+
+    Uses two facts from the test design, not labels: every training gear was run until it spalled, and its first
+    run is healthy (the baseline window sits inside it). Computed on raw run-end values (monotone="none"), since
+    monotone smoothing would make every HI trivially monotone.
+      monotonicity    mean over gears of |sum of run-to-run changes| / sum of |changes|: 1 if the HI never
+                      falls. Weighted by size, unlike Coble & Hines' |#rises - #falls| / (n - 1), so an HI that
+                      stays flat on healthy runs and jumps at spall is not penalised for flat stretches or jitter.
+      trendability    smallest Pearson correlation between two gears' trajectories on a common 0..1 life axis
+      prognosability  exp(-std(final values) / mean |final - first|): do gears end at a similar level? This is
+                      the label-free stand-in for the pooled metric's need for one scale across gears.
+      false_alarm     mean over gears of the share of run-1 minutes above the fold's alarm threshold
+      fitness         (monotonicity + max(trendability, 0) + prognosability) / 3 - false_alarm
+    """
+    r = run_end_scores(s, ends, cols, "none")
+    life = np.linspace(0, 1, 21)
+    run1 = s[s.run_num == 1]
+    rows = []
+    for c in cols:
+        mono, traj, first, last = [], [], [], []
+        for _, g in r.groupby("experiment"):
+            v = g[c].to_numpy()
+            d = np.diff(v)
+            mono.append(abs(d.sum()) / max(np.abs(d).sum(), 1e-9))
+            traj.append(np.interp(life, g.end_h / g.end_h.max(), v))
+            first.append(v[0])
+            last.append(v[-1])
+        corr = np.nan_to_num(np.corrcoef(traj), nan=0.0)  # a flat trajectory has no trend
+        rise = max(np.mean(np.abs(np.subtract(last, first))), 1e-9)
+        alarm = run1[c] > run1.experiment.map(thr[c])
+        rows.append(
+            {
+                "hi": c,
+                "monotonicity": float(np.mean(mono)),
+                "trendability": float(corr[np.triu_indices(len(traj), 1)].min()),
+                "prognosability": float(np.exp(-np.std(last) / rise)),
+                "false_alarm": float(alarm.groupby(run1.experiment).mean().mean()),
+            }
+        )
+    t = pd.DataFrame(rows).set_index("hi")
+    t["fitness"] = (t.monotonicity + t.trendability.clip(lower=0) + t.prognosability) / 3 - t.false_alarm
+    return t.round(4)
+
+
+def evaluate(z_tr, ends_tr, debris_tr, cols, monotone="iso") -> pd.DataFrame:
+    """Leave-one-gear-out scores of each candidate against the photo labels (evaluation only)."""
+    s, _ = logo_scores(z_tr)
     r = run_end_scores(s, ends_tr, cols, monotone).merge(debris_tr, on=["experiment", "run_num"], how="left")
     # debris relative to each gear's run-1 rate, made monotone like the vibration HIs
     r["debris"] = r.debris_rate / r.groupby("experiment").debris_rate.transform("first")
@@ -286,7 +352,14 @@ def main():
     ap.add_argument("--data", type=Path, default=Path("data"))
     ap.add_argument("--out", type=Path, default=Path("models/out"))
     ap.add_argument("--monotone", default="iso", choices=["none", "cummax", "iso"])
-    ap.add_argument("--hi", default=None, help="HI column to submit (default: best pooled MSE in LOGO)")
+    ap.add_argument("--hi", default=HI_DEFAULT, help="HI column to submit with --select fixed")
+    ap.add_argument(
+        "--select",
+        default="fixed",
+        choices=["fixed", "label_free", "photo"],
+        help="fixed: submit --hi; label_free: best label-free fitness; photo: lowest LOGO pooled MSE vs photo labels "
+        "(uses labels for model selection)",
+    )
     a = ap.parse_args()
     a.out.mkdir(parents=True, exist_ok=True)
     cols = ["maha", "spe", "zpos", "zmax", "tooth", "tooth_maha"]
@@ -301,8 +374,16 @@ def main():
         print(t.to_string())
     table, r_tr = evaluate(z["train"], ends["train"], debris, cols, a.monotone)
     print(r_tr[["experiment", "run_num", "end_h", "photo"] + cols].round(2).to_string(index=False))
-    best = a.hi or table.loc[cols, "mse_pooled"].idxmin()
-    print(f"\nsubmitting HI = {best}")
+    s_tr, thr = logo_scores(z["train"])
+    lf = label_free_table(s_tr, thr, ends["train"], cols)
+    print("\nlabel-free selection criteria (no labels; higher fitness is better):")
+    print(lf.to_string())
+    best = {
+        "fixed": a.hi,
+        "label_free": lf.fitness.idxmax(),
+        "photo": table.loc[cols, "mse_pooled"].idxmin(),
+    }[a.select]
+    print(f"\nsubmitting HI = {best}  (--select {a.select})")
 
     hm = HealthyModel().fit(z["train"])
     for split, tmpl in [("validation", "example_validation_submission.csv"), ("test", "example_submission.csv")]:
@@ -318,14 +399,17 @@ def main():
         sub.to_csv(a.out / f"{split}_submission.csv", index=False)
         print(f"\n{split}:\n{sub.to_string(index=False)}")
     table.to_csv(a.out / "logo_eval.csv")
+    lf.to_csv(a.out / "label_free_eval.csv")
     json.dump(
         {
             "hi": best,
+            "select": a.select,
             "monotone": a.monotone,
             "feats": FEATS,
             "tooth": TOOTH,
             "base_h": [BREAK_IN_H, BASE_H],
             "tail_min": TAIL_MIN,
+            "tail_q": TAIL_Q,
         },
         open(a.out / "config.json", "w"),
         indent=1,
