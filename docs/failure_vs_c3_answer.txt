@@ -1,0 +1,21 @@
+Short answer: treat them as separate things, but expect them to meet at the end of each gear's life, and check whether they meet earlier.
+
+They are different kinds of objects. Failure is an event on the time axis: the end of the last run, where test_hours stops. C0 to C3 is a state label read from a photo. One is a time-to-event target, the other is a severity class. The run-to-failure chart should use the event, so the bar ends at failure and the labels appear as markers along it, not as the bar's endpoint.
+
+They will line up at the end by construction. Every train gear has a photo set at its final run, so the final inspection is the worst damage we ever see on that gear. Whatever we define as C3 will almost certainly be present in those last photos. That part is safe to expect.
+
+  Gear    Runs   Hours to failure   Photos at final run
+  Exp-A   5      30.5               yes
+  Exp-B   7      39.4               yes
+  Exp-C   12     73.9               yes
+  Exp-F   8      43.8               yes
+
+What is not guaranteed is the reverse. A gear may reach advanced spall several runs before it becomes unusable. Exp-C ran more than twice as long as Exp-A, and the difference could be a long propagation phase after C3 rather than a late initiation. That question is the point of Part B, so we should not bake the answer in by defining C3 as "the failure photo".
+
+So the working rule is:
+
+- Define the C0 to C3 rubric on visual cues only, without looking at which run the photo came from.
+- After labeling, record for each gear the first inspection at which C3 appears. If that is always the final inspection, C3 and failure are the same thing and C3 is a degenerate class with four examples. In that case collapse the rubric to C0 to C2 and keep failure as the event.
+- If C3 shows up one or more runs before the end, it is a genuine leading state and the gap between first C3 and failure is a useful quantity in its own right.
+
+For the challenge submission this distinction also matters: the template asks for a metric at each run end time, not a class, so failure is never a category there either.

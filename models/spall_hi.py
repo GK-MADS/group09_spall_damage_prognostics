@@ -2,9 +2,9 @@
 
 No damage labels are used to fit anything. Every model is fit on *healthy* data only
 (the first hours of each training gear), and damage is scored as distance from that
-healthy state. The submitted HI is fixed in advance (tooth_maha) or chosen with label-free
-criteria (label_free_table); the photo labels in eda/scripts/compute.py (EYE) are used only
-to report how candidates score under the challenge's rule, unless --select photo is passed.
+healthy state. The submitted HI is fixed in advance (tooth) or chosen with label-free
+criteria (label_free_table); the per-tooth condition labels (<data>/labels/condition_labels.csv)
+are used only to report how candidates score under the challenge's rule, unless --select labels is passed.
 
 Pipeline
   1. 1-s rows -> steady-state filter -> 1-min medians            (load_minutes)
@@ -19,7 +19,7 @@ that follow every rig restart; the tooth HIs stay flat on healthy runs and rise 
 
 Usage
   python models/spall_hi.py                 # evaluate candidates, write submissions to models/out/
-  python models/spall_hi.py --data /path    # folder holding <split>/lf_1s.parquet + particles.parquet
+  python models/spall_hi.py --data /path    # folder holding <split>/lf_1s.parquet, particles.parquet, labels/
   python models/spall_hi.py --select label_free   # submit the HI with the best label-free fitness
 """
 
@@ -60,11 +60,12 @@ BASE_H = 6.0  # healthy window = [BREAK_IN_H, BASE_H]: inside run 1 of every gea
 TAIL_MIN = 60  # run-end value = TAIL_Q quantile of HI over the last TAIL_MIN steady minutes of the run
 TAIL_Q = 0.9  # upper quantile: post-spall spikes are short, a median over a longer tail misses them
 ALARM_Q = 0.99  # label-free false-alarm threshold: this quantile of the HI on the fit gears' baseline minutes
-HI_DEFAULT = "tooth_maha"  # submitted HI, fixed in advance; see --select for the alternatives
+HI_DEFAULT = "tooth"  # submitted HI, fixed in advance; see --select for the alternatives
 DEBRIS_BINS =[f"dm4500_bin_{i}" for i in range(2, 8)]  # larger ferrous particles
 
 # Photo-based damage per (gear, inspection-after-run) from the by-eye labels in eda/scripts/compute.py:
-# initiation = 1, spall = 2, summed over teeth. Evaluation only; never used for fitting.
+# initiation = 1, spall = 2, summed over teeth. Kept as a secondary check (eval T2); the primary reference is the
+# per-tooth condition labels (label_damage). Evaluation only; never used for fitting.
 EYE = {
     ("Exp-A", 16, 4): 1,
     ("Exp-A", 28, 4): 1,
@@ -252,6 +253,13 @@ def photo_damage(ends: pd.DataFrame) -> pd.Series:
     return d.reindex(idx, fill_value=0).to_numpy(dtype=float)
 
 
+def label_damage(ends: pd.DataFrame, labels: Path) -> np.ndarray:
+    """Mean tooth damage after each run from the condition labels: mean over teeth of (score - 1), where 1 = healthy,
+    2 = spall onset, 3 = spalling, 4 = severe spalling. Evaluation only; never used for fitting."""
+    d = pd.read_csv(labels).assign(ex=lambda x: x.score - 1).groupby(["experiment", "run_num"]).ex.mean()
+    return d.reindex(pd.MultiIndex.from_frame(ends[["experiment", "run_num"]])).to_numpy(dtype=float)
+
+
 def challenge_score(pred, truth, groups=None) -> dict:
     """Approximate the organisers' metric: MSE after the best monotone (isotonic) map of pred onto truth.
 
@@ -330,20 +338,20 @@ def label_free_table(s: pd.DataFrame, thr: pd.DataFrame, ends: pd.DataFrame, col
     return t.round(4)
 
 
-def evaluate(z_tr, ends_tr, debris_tr, cols, monotone="iso") -> pd.DataFrame:
-    """Leave-one-gear-out scores of each candidate against the photo labels (evaluation only)."""
+def evaluate(z_tr, ends_tr, debris_tr, labels: Path, cols, monotone="iso") -> pd.DataFrame:
+    """Leave-one-gear-out scores of each candidate against the condition labels (evaluation only)."""
     s, _ = logo_scores(z_tr)
     r = run_end_scores(s, ends_tr, cols, monotone).merge(debris_tr, on=["experiment", "run_num"], how="left")
     # debris relative to each gear's run-1 rate, made monotone like the vibration HIs
     r["debris"] = r.debris_rate / r.groupby("experiment").debris_rate.transform("first")
     r["debris"] = r.groupby("experiment").debris.ffill()
     r["debris"] = r.groupby("experiment").debris.cummax()
-    truth = photo_damage(r)
+    truth = label_damage(r, labels)
     rows = []
     for c in cols + ["debris", "hours_proxy"]:
         pred = r.end_h.to_numpy() if c == "hours_proxy" else r[c].to_numpy()
         rows.append({"hi": c, **challenge_score(pred, truth, r.experiment.to_numpy())})
-    return pd.DataFrame(rows).set_index("hi").round(4), r.assign(photo=truth)
+    return pd.DataFrame(rows).set_index("hi").round(4), r.assign(damage=truth)
 
 
 # ---------------------------------------------------------------- main
@@ -356,9 +364,9 @@ def main():
     ap.add_argument(
         "--select",
         default="fixed",
-        choices=["fixed", "label_free", "photo"],
-        help="fixed: submit --hi; label_free: best label-free fitness; photo: lowest LOGO pooled MSE vs photo labels "
-        "(uses labels for model selection)",
+        choices=["fixed", "label_free", "labels"],
+        help="fixed: submit --hi; label_free: best label-free fitness; labels: lowest LOGO pooled MSE vs the condition "
+        "labels (uses labels for model selection)",
     )
     a = ap.parse_args()
     a.out.mkdir(parents=True, exist_ok=True)
@@ -368,12 +376,13 @@ def main():
     ends = {s: run_ends(a.data, s) for s in SPLITS}
 
     debris = load_debris(a.data, "train")
+    labels = a.data / "labels" / "condition_labels.csv"
     for mode in ["none", "cummax", "iso"]:
-        t, _ = evaluate(z["train"], ends["train"], debris, cols, mode)
-        print(f"\n[{mode}] leave-one-gear-out vs photo labels (lower mse / higher spearman is better):")
+        t, _ = evaluate(z["train"], ends["train"], debris, labels, cols, mode)
+        print(f"\n[{mode}] leave-one-gear-out vs condition labels (lower mse / higher spearman is better):")
         print(t.to_string())
-    table, r_tr = evaluate(z["train"], ends["train"], debris, cols, a.monotone)
-    print(r_tr[["experiment", "run_num", "end_h", "photo"] + cols].round(2).to_string(index=False))
+    table, r_tr = evaluate(z["train"], ends["train"], debris, labels, cols, a.monotone)
+    print(r_tr[["experiment", "run_num", "end_h", "damage"] + cols].round(2).to_string(index=False))
     s_tr, thr = logo_scores(z["train"])
     lf = label_free_table(s_tr, thr, ends["train"], cols)
     print("\nlabel-free selection criteria (no labels; higher fitness is better):")
@@ -381,7 +390,7 @@ def main():
     best = {
         "fixed": a.hi,
         "label_free": lf.fitness.idxmax(),
-        "photo": table.loc[cols, "mse_pooled"].idxmin(),
+        "labels": table.loc[cols, "mse_pooled"].idxmin(),
     }[a.select]
     print(f"\nsubmitting HI = {best}  (--select {a.select})")
 

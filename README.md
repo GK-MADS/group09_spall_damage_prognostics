@@ -38,11 +38,12 @@ Healthy-state models are fit on pooled training baselines only; the submitted HI
 tooth-damage CIs (FM4, M6A, M8A, NA4), taken as the 90th percentile of each run's last hour and made non-decreasing
 per gear with isotonic regression.
 
-The submitted HI is pinned to `tooth_maha` (`--select fixed`, the default). `--select label_free` instead picks the
+The submitted HI is pinned to `tooth` (`--select fixed`, the default). `--select label_free` instead picks the
 candidate with the best label-free fitness (monotonicity, trendability, prognosability and run-1 false-alarm rate,
-written to `models/out/label_free_eval.csv`). The by-eye photo labels are used only to report how candidates score
-under an approximation of the challenge metric (MSE after the best monotone rescaling); `--select photo` picks by
-that score and so uses labels for model selection.
+written to `models/out/label_free_eval.csv`). The per-tooth condition labels in `data/labels/condition_labels.csv`
+(all four training gears; 1 = healthy, 2 = spall onset, 3 = spalling, 4 = severe spalling) are used only to report how
+candidates score under an approximation of the challenge metric: MSE after the best monotone rescaling, against the
+mean over teeth of (score − 1). `--select labels` picks by that score and so uses labels for model selection.
 
 ### Using the Exp-A / Exp-B spall labels
 

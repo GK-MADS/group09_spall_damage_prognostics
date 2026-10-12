@@ -9,7 +9,7 @@ import pandas as pd
 from spall_hi import FEATS, TOOTH
 
 from .adapters import HI, IForest, LabelTuned, RidgeApproach
-from .harness import OUT, SEED, evaluate_runs, load_dataset, record, run_folds, save_fig
+from .harness import OUT, SEED, T1, T2, evaluate_runs, load_dataset, record, run_folds, save_fig
 
 ALPHAS = np.logspace(-3, 4, 13)
 
@@ -22,8 +22,8 @@ def _tick(v) -> str:
 
 
 def _rows(approach, param, value, fr, coef_norm=np.nan):
-    s1, g1 = evaluate_runs(fr.runs, "photo")
-    s2, _ = evaluate_runs(fr.runs, "mean_ex")
+    s1, g1 = evaluate_runs(fr.runs, T1)
+    s2, _ = evaluate_runs(fr.runs, T2)
     return [
         dict(
             approach=approach,

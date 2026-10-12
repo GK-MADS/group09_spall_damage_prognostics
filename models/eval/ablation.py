@@ -9,7 +9,7 @@ import pandas as pd
 from spall_hi import FEATS, TOOTH
 
 from .adapters import HI, IForest, RidgeApproach
-from .harness import OUT, evaluate_runs, load_dataset, record, run_folds, save_fig, with_debris_feature
+from .harness import OUT, T1, T2, evaluate_runs, load_dataset, record, run_folds, save_fig, with_debris_feature
 
 
 def _drop(cols, c):
@@ -67,8 +67,8 @@ def main(ds=None) -> pd.DataFrame:
             dict(
                 approach=name,
                 ablation=abl,
-                t1_mse_pooled=evaluate_runs(fr.runs, "photo")[0]["mse_pooled"],
-                t2_mse_pooled=evaluate_runs(fr.runs, "mean_ex")[0]["mse_pooled"],
+                t1_mse_pooled=evaluate_runs(fr.runs, T1)[0]["mse_pooled"],
+                t2_mse_pooled=evaluate_runs(fr.runs, T2)[0]["mse_pooled"],
             )
         )
         print(rows[-1])

@@ -42,7 +42,7 @@ def synth_labels(runs=4):
     return pd.DataFrame(
         [
             dict(experiment=g, run_num=r, mean_ex=[0, 0, 0.1, 0.4][r - 1], max=1.0, top3=0.0)
-            for g in ["Exp-A", "Exp-B"]
+            for g in GEARS
             for r in range(1, runs + 1)
         ]
     )
@@ -131,7 +131,7 @@ def test_run_folds_never_shows_the_held_out_gear_to_fit():
         (held,) = sg
         assert held not in zg | eg | lg and seg == {held}
     assert set(fr.runs.columns) >= {"experiment", "run_num", "end_h", "score", "threshold", "photo", "spall", "mean_ex"}
-    assert fr.runs.mean_ex.notna().sum() == 8  # only Exp-A/B folds carry T2
+    assert fr.runs.mean_ex.notna().sum() == 16  # condition labels (T1) cover every training gear
 
 
 def test_sign_flip_p_exact_values():
@@ -163,15 +163,20 @@ def _runs(scores, photo, spall, threshold=0.5, gear="Exp-X"):
 
 
 def test_detection_counts_and_lead_time():
-    a = _runs([0.1, 0.9, 0.9, 0.9], [0, 0, 1, 2], [False, False, False, True])  # alarm 12 h early, 1 false alarm
+    a = _runs([0.1, 0.9, 0.9, 0.9], [0, 0, 1, 2], [False, False, False, True])  # 12 h early: 2 alarms before onset
     b = _runs([0.1, 0.1, 0.1, 0.1], [0, 0, 0, 2], [False, False, False, True], gear="Exp-Y")  # never flagged
     c = _runs([0.1, 0.1, 0.1, 0.9], [0, 0, 2, 2], [False, False, True, True], gear="Exp-Z")  # 6 h late
     r = pd.concat([a, b, c])
     d = H.detection(r)
-    assert (d["caught"], d["missed"], d["false_alarms"]) == (2, 2, 1)
-    assert np.isclose(d["f1"], 4 / 7)
+    assert (d["caught"], d["missed"], d["false_alarms"]) == (2, 2, 2)
+    assert np.isclose(d["f1"], 4 / 8)
     lt = H.lead_times(r)
     assert lt["Exp-X"] == 12.0 and np.isnan(lt["Exp-Y"]) and lt["Exp-Z"] == -6.0
+
+
+def test_spall_events_are_run_ends_where_any_tooth_reaches_onset():
+    runs = pd.DataFrame({"max": [1.0, 1.9, 2.0, 3.5]})
+    assert H.spall_flags(runs).tolist() == [False, False, True, True]
 
 
 def test_evaluate_runs_constant_score_gives_nan_spearman_finite_mse():

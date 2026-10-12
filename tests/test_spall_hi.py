@@ -43,6 +43,17 @@ def test_tooth_features_are_a_subset_of_the_modelled_features():
     assert set(TOOTH) <= set(FEATS)
 
 
+def test_label_damage_is_mean_tooth_excess_per_run(tmp_path):
+    from spall_hi import label_damage
+
+    pd.DataFrame(
+        dict(experiment="Exp-X", tooth=[1, 2, 1, 2], run_num=[1, 1, 2, 2], score=[1.0, 1.0, 1.0, 3.0])
+    ).to_csv(tmp_path / "l.csv", index=False)
+    ends = pd.DataFrame(dict(experiment="Exp-X", run_num=[2, 1, 3]))
+    out = label_damage(ends, tmp_path / "l.csv")
+    assert out[0] == 1.0 and out[1] == 0.0 and np.isnan(out[2])  # follows ends' order; unlabelled run -> NaN
+
+
 def test_load_labels_aggregates_teeth(tmp_path):
     from spall_supervised import load_labels
 

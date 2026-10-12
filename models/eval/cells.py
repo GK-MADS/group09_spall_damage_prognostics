@@ -26,8 +26,10 @@ CELLS = [
     ("code", SETUP),
     (
         "md",
-        "## 1. Evaluation method\n\nLeave-one-gear-out over Exp-A, B, C, F. T1 = photo damage (all 4 gears); "
-        "T2 = tooth labels (`mean_ex`, Exp-A/B folds only). Gear error = squared residual under one pooled "
+        "## 1. Evaluation method\n\nLeave-one-gear-out over Exp-A, B, C, F. T1 = condition labels: mean over the 28 "
+        "teeth of (score - 1), all 4 gears (`data/labels/condition_labels.csv`; 2 = spall onset, 3 = spalling, "
+        "4 = severe). T2 = the earlier by-eye photo proxy. A spall event is a run end where any tooth reaches 2; a "
+        "false alarm is an alarm before that. Labels are used only to score, never to fit or select. Gear error = squared residual under one pooled "
         "isotonic map, averaged within gear. p-values are exact sign-flip tests over gears; with 4 gears the "
         "smallest possible p is 1/16.",
     ),

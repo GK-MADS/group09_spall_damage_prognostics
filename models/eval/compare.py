@@ -10,6 +10,8 @@ import pandas as pd
 from .adapters import registry
 from .harness import (
     OUT,
+    T1,
+    T2,
     bootstrap_range,
     detection,
     evaluate_runs,
@@ -47,7 +49,7 @@ def rank_approaches(table: pd.DataFrame, tol: float = T1_TIE_TOL) -> list[str]:
 
 
 def label_noise_mse(runs: pd.DataFrame) -> float:
-    """T1 mse_pooled on the final two run ends per gear only (the inspections that were checked by eye)."""
+    """T1 mse_pooled on the final two run ends per gear only (the inspections checked most closely)."""
     last2 = runs.groupby("experiment").run_num.transform(lambda r: r >= r.max() - 1)
     return evaluate_runs(runs[last2])[0]["mse_pooled"]
 
@@ -59,8 +61,8 @@ def main(ds=None) -> pd.DataFrame:
     hours_err = evaluate_runs(results["hours"].runs)[1]
     for name, fr in results.items():
         a = next(iter(fr.models.values()))
-        s1, g1 = evaluate_runs(fr.runs, "photo")
-        s2, _ = evaluate_runs(fr.runs, "mean_ex")
+        s1, g1 = evaluate_runs(fr.runs, T1)
+        s2, _ = evaluate_runs(fr.runs, T2)
         diffs = (hours_err - g1).reindex(g1.index)
         lo, hi = bootstrap_range(g1.to_numpy())
         lt = lead_times(fr.runs)
@@ -144,11 +146,11 @@ def _fig_trajectories(runs, top):
     for ax, g in zip(axes, gears):
         for i, name in enumerate(top):
             r = runs[runs.approach == name]
-            fitted = pooled_residuals(r.score, r.photo) + r.photo / max(r.photo.max(), 1e-9)
+            fitted = pooled_residuals(r.score, r[T1]) + r[T1] / max(r[T1].max(), 1e-9)
             k = (r.experiment == g).to_numpy()
             ax.step(r.end_h[k], fitted[k], where="post", label=name, ls=["-", "--", ":"][i % 3], lw=2.2 - 0.5 * i)
         t = runs[(runs.approach == top[0]) & (runs.experiment == g)]
-        ax.step(t.end_h, t.photo / runs.photo.max(), where="post", color="k", lw=1, label="photo truth")
+        ax.step(t.end_h, t[T1] / runs[T1].max(), where="post", color="k", lw=1, label="label truth (mean tooth)")
         ax.set_title(g)
         ax.set_xlabel("hours")
     axes[0].set_ylabel("damage (scaled)")
@@ -158,7 +160,7 @@ def _fig_trajectories(runs, top):
 
 
 def _fig_lead(lead, order, false_alarms):
-    """With photo truth, an early warning and a false alarm on a healthy-looking gear are the same event,
+    """An early warning and a false alarm (flag before any tooth reaches spall onset) are the same event,
     so each approach's lead times are labelled with its false-alarm count."""
     p = lead.pivot(index="approach", columns="experiment", values="lead_h").reindex(order)
     fig, ax = plt.subplots(figsize=(10, 3.5))
@@ -174,7 +176,7 @@ def _fig_lead(lead, order, false_alarms):
     ax.legend(title="held-out gear", bbox_to_anchor=(1.01, 1), loc="upper left", fontsize=8)
     ax.set_xticks(range(len(p)), [f"{a}\n({int(false_alarms[a])} FA)" for a in p.index], rotation=90)
     ax.set_title(
-        "Hours from first (causal) alarm to first spall photo; FA = false alarms on undamaged run ends\n"
+        "Hours from first (causal) alarm to first spall onset (a tooth at 2); FA = alarms before onset\n"
         "dot = alarm at the spall inspection, x = never flagged"
     )
     save_fig(fig, "fig_lead_time.png")

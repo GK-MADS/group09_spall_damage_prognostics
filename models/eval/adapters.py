@@ -143,6 +143,7 @@ class LabelTuned:
         )
 
     def _select(self, gears, ends, lab):
+        lab = lab[lab.experiment.isin(LABELLED)]  # tuned on the A/B labels + C/F photo proxy, as originally designed
         rows = []
         for base_h in GRID["base_h"]:
             zc = condition_correct(self.minutes[self.minutes.experiment.isin(gears)], base_h)

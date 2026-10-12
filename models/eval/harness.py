@@ -1,7 +1,9 @@
 """Common evaluation protocol: one set of folds, metrics, gear-level uncertainty and detection for every approach.
 
-The independent unit is the gear (4 training gears, 2 labelled). Per-gear numbers are the primary evidence;
-bootstrap ranges are descriptive and sign-flip p-values are reported next to their floor 1/2**n_gears.
+The independent unit is the gear (4 training gears, all with per-tooth condition labels).
+T1 (primary) = mean tooth damage from data/labels/condition_labels.csv (mean over the 28 teeth of score - 1);
+T2 = the earlier by-eye photo proxy (photo_damage). A spall event is a run end where any tooth reaches 2 (onset).
+Per-gear numbers are the primary evidence; bootstrap ranges are descriptive and sign-flip p-values are reported next to their floor 1/2**n_gears.
 """
 
 import itertools
@@ -20,7 +22,6 @@ from sklearn.isotonic import IsotonicRegression  # noqa: E402
 from spall_hi import (  # noqa: E402
     BASE_H,
     BREAK_IN_H,
-    EYE,
     SPLITS,
     challenge_score,
     condition_correct,
@@ -29,12 +30,14 @@ from spall_hi import (  # noqa: E402
     photo_damage,
     run_ends,
 )
-from spall_supervised import LABELLED, load_labels  # noqa: E402
+from spall_supervised import load_labels  # noqa: E402
 
 SEED = 696
 TRAIN = SPLITS["train"]
 OUT = Path(__file__).resolve().parent / "out"
 RECREATE = "python scripts/phm_data.py small && python scripts/flatten_hdf5.py"
+T1, T2 = "mean_ex", "photo"  # evaluation targets: condition labels (primary), by-eye photo proxy (secondary)
+SPALL_ONSET = 2.0  # tooth score at spall onset (2 = onset, 3 = spalling, 4 = severe spalling)
 
 
 @dataclass
@@ -42,13 +45,13 @@ class Dataset:
     minutes: pd.DataFrame  # raw steady minutes (load_minutes), all training gears
     z: pd.DataFrame  # condition-corrected minutes
     ends: pd.DataFrame  # experiment, run_num, end_h
-    lab: pd.DataFrame  # run-level label targets for Exp-A/B (load_labels)
+    lab: pd.DataFrame  # run-level condition-label targets for every training gear (load_labels)
     debris: pd.DataFrame  # experiment, run_num, debris_rate
 
 
 def load_dataset(
     data=Path("data"),
-    labels=Path("data/labels/spall_scores.csv"),
+    labels=Path("data/labels/condition_labels.csv"),
     *,
     base_h=BASE_H,
     break_in_h=BREAK_IN_H,
@@ -80,9 +83,9 @@ def folds(gears=TRAIN) -> list[tuple[list[str], str]]:
     return [([g for g in gears if g != h], h) for h in gears]
 
 
-def spall_flags(ends: pd.DataFrame) -> np.ndarray:
-    spall = {(e, r) for (e, _, r), v in EYE.items() if v == 2}
-    return np.array([(e, r) in spall for e, r in zip(ends.experiment, ends.run_num)])
+def spall_flags(runs: pd.DataFrame) -> np.ndarray:
+    """Run ends where any tooth has reached spall onset (needs the label column `max`)."""
+    return (runs["max"] >= SPALL_ONSET).to_numpy()
 
 
 @dataclass
@@ -113,9 +116,8 @@ def run_folds(make: Callable, ds: Dataset) -> FoldResult:
         models[held] = a
     runs = pd.concat(parts, ignore_index=True).sort_values(["experiment", "run_num"], ignore_index=True)
     runs["photo"] = photo_damage(runs)
+    runs = runs.merge(ds.lab[["experiment", "run_num", "mean_ex", "max"]], on=["experiment", "run_num"], how="left")
     runs["spall"] = spall_flags(runs)
-    lab = ds.lab[ds.lab.experiment.isin(LABELLED)][["experiment", "run_num", "mean_ex"]]
-    runs = runs.merge(lab, on=["experiment", "run_num"], how="left")
     return FoldResult(runs, models, fit_s, score_s)
 
 
@@ -126,7 +128,7 @@ def pooled_residuals(score, truth) -> np.ndarray:
     return IsotonicRegression(out_of_bounds="clip").fit(score, truth).predict(score) - truth
 
 
-def evaluate_runs(runs: pd.DataFrame, target: str = "photo") -> tuple[dict, pd.Series]:
+def evaluate_runs(runs: pd.DataFrame, target: str = T1) -> tuple[dict, pd.Series]:
     """challenge_score on the run ends that carry `target`, plus gear error (pooled-map residuals per gear)."""
     x = runs[runs[target].notna()]
     s = challenge_score(x.score.to_numpy(float), x[target].to_numpy(float), x.experiment.to_numpy())
@@ -159,14 +161,14 @@ def _alarm(runs: pd.DataFrame) -> pd.Series:
 
 
 def detection(runs: pd.DataFrame) -> dict:
-    """Spall run ends caught/missed; false alarms are flags on run ends with no photo damage at all.
+    """Spall run ends caught/missed; false alarms are flags on run ends before any tooth reached spall onset.
 
     Alarms use the causal series (no information from later runs) when present.
     """
     flag = _alarm(runs) > runs.threshold
     caught = int((flag & runs.spall).sum())
     missed = int((~flag & runs.spall).sum())
-    false = int((flag & (runs.photo == 0)).sum())
+    false = int((flag & ~runs.spall).sum())
     denom = 2 * caught + missed + false
     return dict(caught=caught, missed=missed, false_alarms=false, f1=2 * caught / denom if denom else np.nan)
 

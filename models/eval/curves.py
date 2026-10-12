@@ -7,11 +7,11 @@ import itertools
 
 import matplotlib.pyplot as plt
 import pandas as pd
-from spall_hi import challenge_score, photo_damage
+from spall_hi import challenge_score
 from spall_supervised import LABELLED
 
 from .adapters import HI, IForest, RidgeApproach
-from .harness import OUT, TRAIN, evaluate_runs, load_dataset, pooled_residuals, record, run_folds, save_fig
+from .harness import OUT, T1, TRAIN, evaluate_runs, load_dataset, pooled_residuals, record, run_folds, save_fig
 
 APPROACHES = {
     "hi_tooth": lambda: HI("tooth"),
@@ -45,9 +45,9 @@ def gear_curve(ds) -> pd.DataFrame:
                     r = a.score(ds.z[ds.z.experiment == held], ds.ends[ds.ends.experiment == held])
                     preds.append(r.assign(k=k, held=held, combo="+".join(c[-1] for c in combo)))
         p = pd.concat(preds, ignore_index=True)
-        p["photo"] = photo_damage(p)
+        p = p.merge(ds.lab[["experiment", "run_num", T1]], on=["experiment", "run_num"], how="left")
         for k, pk in p.groupby("k"):
-            pk = pk.assign(sq=pooled_residuals(pk.score, pk.photo) ** 2)
+            pk = pk.assign(sq=pooled_residuals(pk.score, pk[T1]) ** 2)
             rows += [
                 dict(approach=name, k=k, held=h, combo=c, err=e)
                 for (h, c), e in pk.groupby(["held", "combo"]).sq.mean().items()
